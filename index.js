@@ -43,6 +43,11 @@ console.log('Routes registered:')
 // Error handler must be last
 app.use(errorHandler)
 
-db.init().catch((err) => console.error('DB init error', err))
+const initializeDatabase = require('./initialize-database')
+
+// Initialize database on startup
+initializeDatabase()
+    .then(() => console.log('✅ Database ready'))
+    .catch((err) => console.error('❌ DB init error:', err))
 
 app.listen(PORT, () => console.log(`Backend listening at http://localhost:${PORT}`))
