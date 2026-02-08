@@ -15,7 +15,14 @@ const PORT = process.env.PORT || 3000
 const app = express()
 
 app.use(express.json())
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'] }))
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://finalyearrepoprototypefrontend.onrender.com'
+    ],
+    credentials: true
+}))
 
 // Debug: Log all incoming requests
 app.use((req, res, next) => {
