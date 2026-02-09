@@ -16,22 +16,21 @@ class AdminService {
                 u.role,
                 u.is_active,
                 u.created_at,
-                u.last_login,
                 CASE 
-                    WHEN u.role = 'student' THEN s.matric_no
-                    WHEN u.role = 'supervisor' THEN st.staff_id
+                    WHEN u.role = 'student' THEN s.student_matric_no
+                    WHEN u.role = 'supervisor' THEN sup.staff_id
                     WHEN u.role = 'admin' THEN a.admin_level
                     ELSE NULL
                 END as identifier,
                 CASE 
                     WHEN u.role = 'student' THEN s.department
-                    WHEN u.role = 'supervisor' THEN st.department
+                    WHEN u.role = 'supervisor' THEN NULL
                     ELSE NULL
                 END as department,
                 a.admin_level
             FROM Users u
             LEFT JOIN Students s ON u.id = s.user_id
-            LEFT JOIN Staff st ON u.id = st.user_id
+            LEFT JOIN Supervisors sup ON u.id = sup.user_id
             LEFT JOIN admins a ON u.id = a.user_id
             WHERE 1=1
         `;
@@ -180,10 +179,10 @@ class AdminService {
         const query = `
             SELECT 
                 COUNT(*) as total_requests,
-                COUNT(*) FILTER (WHERE status = 'pending') as pending_requests,
-                COUNT(*) FILTER (WHERE status = 'approved') as approved_requests,
-                COUNT(*) FILTER (WHERE status = 'rejected') as rejected_requests
-            FROM Requests
+                COUNT(*) FILTER (WHERE status = 'Pending') as pending_requests,
+                COUNT(*) FILTER (WHERE status = 'Approved') as approved_requests,
+                COUNT(*) FILTER (WHERE status = 'Rejected') as rejected_requests
+            FROM Access_Requests_Student
         `;
 
         const result = await db.query(query);
@@ -206,7 +205,7 @@ class AdminService {
                 u.first_name || ' ' || u.last_name as student_name,
                 p.title as project_title,
                 sup.first_name || ' ' || sup.last_name as supervisor_name
-            FROM Requests r
+            FROM Access_Requests_Student r
             JOIN Users u ON r.student_id = u.id
             JOIN Projects p ON r.project_id = p.project_id
             LEFT JOIN Users sup ON p.supervisor_id = sup.id
@@ -222,7 +221,7 @@ class AdminService {
             paramCount++;
         }
 
-        query += ` ORDER BY r.created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+        query += ` ORDER BY r.requested_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
         values.push(limit, offset);
 
         const result = await db.query(query, values);
@@ -249,7 +248,7 @@ class AdminService {
             UNION ALL
             (SELECT 'project_created' as action, title as details, created_at FROM Projects ORDER BY created_at DESC LIMIT 5)
             UNION ALL
-            (SELECT 'request_submitted' as action, CAST(request_id AS TEXT) as details, created_at FROM Requests ORDER BY created_at DESC LIMIT 5)
+            (SELECT 'request_submitted' as action, CAST(request_id AS TEXT) as details, requested_at as created_at FROM Access_Requests_Student ORDER BY requested_at DESC LIMIT 5)
             ORDER BY created_at DESC
             LIMIT 10
         `;
