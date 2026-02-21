@@ -8,6 +8,7 @@ const uploadRoutes = require('./routes/uploadRoutes')
 const artifactRoutes = require('./routes/artifactRoutes')
 const requestRoutes = require('./routes/requests')
 const adminRoutes = require('./routes/admin')
+const submissionRoutes = require('./routes/submissionRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
 
@@ -37,6 +38,7 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api/projects', artifactRoutes)
 app.use('/api/requests', requestRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/submissions', submissionRoutes)
 
 console.log('Routes registered:')
 

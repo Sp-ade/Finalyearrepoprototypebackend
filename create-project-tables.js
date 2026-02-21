@@ -27,7 +27,7 @@ async function createProjectTables() {
                 department VARCHAR(100) NOT NULL,
                 category VARCHAR(50),
                 academic_year VARCHAR(20) NOT NULL,
-                grade VARCHAR(5),
+                grade VARCHAR(7),
                 status VARCHAR(20) DEFAULT 'Active' CHECK (status IN ('Active', 'Archived', 'Pending')),
                 
                 supervisor_id INT REFERENCES Users(id) ON DELETE SET NULL,

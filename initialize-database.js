@@ -1,6 +1,7 @@
 const db = require('./Database');
 const createProjectTables = require('./create-project-tables');
 const createRequestTables = require('./create-request-tables');
+const createSubmissionTable = require('./create-submission-table');
 
 async function initializeDatabase() {
     try {
@@ -20,6 +21,11 @@ async function initializeDatabase() {
         console.log('Step 3: Creating request tables...');
         await createRequestTables();
         console.log('✓ Request tables created\n');
+
+        // Step 4: Create submission tables
+        console.log('Step 4: Creating submission tables...');
+        await createSubmissionTable();
+        console.log('✓ Submission tables created\n');
 
         console.log('✅ Database initialization complete!');
         console.log('All tables have been created successfully.');

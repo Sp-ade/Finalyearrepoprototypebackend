@@ -41,6 +41,7 @@ const getAllProjects = async (req, res) => {
 };
 
 const requestRepository = require('../repositories/requestRepository');
+const db = require('../Database');
 
 /**
  * Get a single project by ID
@@ -58,21 +59,39 @@ const getProjectById = async (req, res) => {
             });
         }
 
+        const project = result.project;
         let hasAccess = false;
 
         // If studentId is provided, check access
         if (studentId) {
-            hasAccess = await requestRepository.checkAccess(studentId, parseInt(id));
+            // 1. Check if student is the submitter
+            const submissionRes = await db.query(
+                'SELECT 1 FROM Project_Submissions WHERE project_id = $1 AND student_id = $2',
+                [id, studentId]
+            );
+
+            if (submissionRes.rows.length > 0) {
+                hasAccess = true;
+            } else {
+                // 2. Check if student is a participant (name match in Studentsnames)
+                const userRes = await db.query('SELECT first_name, last_name FROM Users WHERE id = $1', [studentId]);
+                if (userRes.rows.length > 0) {
+                    const fullName = `${userRes.rows[0].first_name} ${userRes.rows[0].last_name}`.toLowerCase();
+                    const participants = project.Studentnames || [];
+                    if (participants.some(name => name.toLowerCase() === fullName)) {
+                        hasAccess = true;
+                    }
+                }
+            }
+
+            // 3. Fallback to existing manual access request check
+            if (!hasAccess) {
+                hasAccess = await requestRepository.checkAccess(studentId, parseInt(id));
+            }
         }
 
-        // Return project with hasAccess flag
-        // We might want to filter artifacts if not hasAccess, but for now we'll just send the flag
-        // and let frontend handle visibility, or we can filter here.
-        // The user requirement implies "student can view the pdf since he has access".
-        // Let's send the flag.
-
         const responseData = {
-            ...result.project,
+            ...project,
             hasAccess
         };
 

@@ -165,6 +165,21 @@ class ProjectService {
                 }
             }
 
+            // Update attachments if provided
+            if (projectData.attachments && Array.isArray(projectData.attachments)) {
+                await artifactRepository.deleteAllArtifactsForProject(projectId);
+                for (const att of projectData.attachments) {
+                    const artifactData = {
+                        fileName: att.fileName || att.originalName || 'document',
+                        filePath: att.url || att.file_path,
+                        fileType: att.fileType || att.file_type || 'application/pdf',
+                        uploadedBy: null,
+                        isPublic: true
+                    };
+                    await artifactRepository.createArtifact(projectId, artifactData);
+                }
+            }
+
             // Fetch the complete updated project
             const completeProject = await projectRepository.getProjectById(projectId);
 

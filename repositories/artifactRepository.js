@@ -76,6 +76,20 @@ class ArtifactRepository {
         const result = await db.query(query, [isPublic, projectId, artifactId]);
         return result.rows[0];
     }
+
+    /**
+     * Delete all artifacts for a project
+     */
+    async deleteAllArtifactsForProject(projectId) {
+        const query = `
+            DELETE FROM Project_Artifacts
+            WHERE project_id = $1
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [projectId]);
+        return result.rows;
+    }
 }
 
 module.exports = new ArtifactRepository();
