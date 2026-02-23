@@ -53,46 +53,71 @@ module.exports = {
       );
     `)
   },
-  async createUser(email, passwordHash, firstName, lastName, role = 'student', roleSpecificId, department = null) {
-    const client = await pool.connect()
-    try {
-      await client.query('BEGIN')
+  async createUser(
+  email,
+  passwordHash,
+  firstName,
+  lastName,
+  role = 'student',
+  roleSpecificId,
+  department = null,
+  verificationToken,
+  verificationExpiry) {
+  const client = await pool.connect()
 
-      // Insert into Users table
-      const userRes = await client.query(
-        'INSERT INTO Users (email, password_hash, first_name, last_name, role) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (email) DO NOTHING RETURNING *',
-        [email, passwordHash, firstName, lastName, role]
-      )
+  try {
+    await client.query('BEGIN')
 
-      if (!userRes.rows[0]) {
-        await client.query('ROLLBACK')
-        return null
-      }
+    // Insert into Users table with verification fields
+    const userRes = await client.query(
+      `INSERT INTO Users 
+        (email, password_hash, first_name, last_name, role, is_verified, verification_token, verification_expires) 
+       VALUES ($1, $2, $3, $4, $5, false, $6, $7)
+       ON CONFLICT (email) DO NOTHING 
+       RETURNING *`,
+      [
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        role,
+        verificationToken,
+        verificationExpiry
+      ]
+    )
 
-      const user = userRes.rows[0]
-
-      // Insert into role-specific table
-      if (role === 'student') {
-        await client.query(
-          'INSERT INTO Students (user_id, student_matric_no, department) VALUES ($1, $2, $3)',
-          [user.id, roleSpecificId, department || 'Not Specified']
-        )
-      } else if (role === 'supervisor') {
-        await client.query(
-          'INSERT INTO Supervisors (user_id, staff_id) VALUES ($1, $2)',
-          [user.id, roleSpecificId]
-        )
-      }
-
-      await client.query('COMMIT')
-      return user
-    } catch (err) {
+    if (!userRes.rows[0]) {
       await client.query('ROLLBACK')
-      throw err
-    } finally {
-      client.release()
+      return null
     }
-  },
+
+    const user = userRes.rows[0]
+
+    // Insert into role-specific table
+    if (role === 'student') {
+      await client.query(
+        `INSERT INTO Students (user_id, student_matric_no, department) 
+         VALUES ($1, $2, $3)`,
+        [user.id, roleSpecificId, department || 'Not Specified']
+      )
+    } else if (role === 'supervisor') {
+      await client.query(
+        `INSERT INTO Supervisors (user_id, staff_id) 
+         VALUES ($1, $2)`,
+        [user.id, roleSpecificId]
+      )
+    }
+
+    await client.query('COMMIT')
+    return user
+
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+},
   async findUserByEmail(email) {
     const res = await pool.query('SELECT * FROM Users WHERE email = $1', [email])
     return res.rows[0]
