@@ -21,8 +21,12 @@ exports.login = async (email, password) => {
     role: user.role
   })
 
-  // Send login notification
-  await sendLoginNotification(user.email)
+  // Send login notification (errors are non‑fatal)
+  try {
+    await sendLoginNotification(user.email)
+  } catch (err) {
+    console.error('Login notification failed', err)
+  }
 
   return {
     user: {

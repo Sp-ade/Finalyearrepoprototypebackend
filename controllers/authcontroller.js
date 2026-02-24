@@ -1,6 +1,7 @@
 const authService = require('../services/authservice')
 const jwt = require('jsonwebtoken')
 const db = require('../Database')
+const emailService = require('../services/emailService')
 
 exports.login = async (req, res, next) => {
   try {
@@ -71,6 +72,55 @@ exports.verifyEmail = async (req, res, next) => {
       </html>
     `);
 
+  } catch (err) {
+    next(err)
+  }
+}
+
+// helper endpoint used by frontend test page
+exports.forceVerify = async (req, res, next) => {
+  try {
+    const { email } = req.body || {}
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' })
+    }
+
+    // Ensure verification columns exist in case older DB missing them
+    await db.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+    `)
+    await db.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);
+    `)
+    await db.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP;
+    `)
+
+    const result = await db.query(
+      `UPDATE Users SET is_verified = true WHERE email = $1 RETURNING *`,
+      [email]
+    )
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+    res.json({ message: 'User verified', user: result.rows[0] })
+  } catch (err) {
+    next(err)
+  }
+}
+
+exports.sendTestEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body || {}
+    if (!email) return res.status(400).json({ error: 'Email is required' })
+
+    // send a lightweight test email (login notification template)
+    await emailService.sendLoginNotification(email)
+
+    res.json({ message: 'Test email sent' })
   } catch (err) {
     next(err)
   }

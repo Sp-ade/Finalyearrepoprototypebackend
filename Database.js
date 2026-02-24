@@ -10,7 +10,7 @@ module.exports = {
   pool,
   query: (text, params) => pool.query(text, params),
   async init() {
-    // Create Users table (parent table)
+    // Create Users table (parent table) with all columns needed for auth/verification
     await pool.query(`
       CREATE TABLE IF NOT EXISTS Users(
         id SERIAL PRIMARY KEY,
@@ -24,8 +24,26 @@ module.exports = {
         ),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        is_active BOOLEAN DEFAULT TRUE 
+        is_active BOOLEAN DEFAULT TRUE,
+        -- verification support
+        is_verified BOOLEAN DEFAULT FALSE,
+        verification_token VARCHAR(255),
+        verification_expires TIMESTAMP
       );
+    `)
+
+    // if table already existed before we added verification columns, make sure they exist
+    await pool.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
+    `)
+    await pool.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);
+    `)
+    await pool.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP;
     `)
 
     // Create Students table (child table)
