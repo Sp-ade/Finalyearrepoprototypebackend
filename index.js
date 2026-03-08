@@ -9,6 +9,7 @@ const artifactRoutes = require('./routes/artifactRoutes')
 const requestRoutes = require('./routes/requests')
 const adminRoutes = require('./routes/admin')
 const submissionRoutes = require('./routes/submissionRoutes')
+const supervisorRoutes = require('./routes/supervisorRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
 
@@ -39,6 +40,7 @@ app.use('/api/projects', artifactRoutes)
 app.use('/api/requests', requestRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/submissions', submissionRoutes)
+app.use('/api/supervisors', supervisorRoutes)
 
 console.log('Routes registered:')
 

@@ -9,5 +9,7 @@ router.get('/verify-email', controller.verifyEmail)
 router.post('/force-verify', controller.forceVerify)
 // send a simple test email to given address
 router.post('/send-test-email', controller.sendTestEmail)
+// update user password
+router.post('/update-password', controller.updatePassword)
 // router.post('/register', controller.register) // optional
 module.exports = router

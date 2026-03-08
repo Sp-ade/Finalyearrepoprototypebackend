@@ -46,12 +46,19 @@ module.exports = {
       ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP;
     `)
 
+    // Add student_ids column to Projects if it doesn't exist yet, this was added as a safer way to have students view their active projects, adn submission status.
+    await pool.query(`
+      ALTER TABLE Projects
+      ADD COLUMN IF NOT EXISTS student_ids TEXT DEFAULT '[]';
+    `)
+
     // Create Students table (child table)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS Students (
         user_id INTEGER PRIMARY KEY REFERENCES Users(id) ON DELETE CASCADE,
         student_matric_no VARCHAR(11) UNIQUE NOT NULL,
-        department VARCHAR(100) NOT NULL
+        department VARCHAR(100) NOT NULL,
+        role VARCHAR(20) DEFAULT 'member' NOT NULL CHECK (role IN ('leader', 'member'))
       );
     `)
 
@@ -72,70 +79,70 @@ module.exports = {
     `)
   },
   async createUser(
-  email,
-  passwordHash,
-  firstName,
-  lastName,
-  role = 'student',
-  roleSpecificId,
-  department = null,
-  verificationToken,
-  verificationExpiry) {
-  const client = await pool.connect()
+    email,
+    passwordHash,
+    firstName,
+    lastName,
+    role = 'student',
+    roleSpecificId,
+    department = null,
+    verificationToken,
+    verificationExpiry) {
+    const client = await pool.connect()
 
-  try {
-    await client.query('BEGIN')
+    try {
+      await client.query('BEGIN')
 
-    // Insert into Users table with verification fields
-    const userRes = await client.query(
-      `INSERT INTO Users 
+      // Insert into Users table with verification fields
+      const userRes = await client.query(
+        `INSERT INTO Users 
         (email, password_hash, first_name, last_name, role, is_verified, verification_token, verification_expires) 
        VALUES ($1, $2, $3, $4, $5, false, $6, $7)
        ON CONFLICT (email) DO NOTHING 
        RETURNING *`,
-      [
-        email,
-        passwordHash,
-        firstName,
-        lastName,
-        role,
-        verificationToken,
-        verificationExpiry
-      ]
-    )
+        [
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          role,
+          verificationToken,
+          verificationExpiry
+        ]
+      )
 
-    if (!userRes.rows[0]) {
-      await client.query('ROLLBACK')
-      return null
-    }
+      if (!userRes.rows[0]) {
+        await client.query('ROLLBACK')
+        return null
+      }
 
-    const user = userRes.rows[0]
+      const user = userRes.rows[0]
 
-    // Insert into role-specific table
-    if (role === 'student') {
-      await client.query(
-        `INSERT INTO Students (user_id, student_matric_no, department) 
+      // Insert into role-specific table
+      if (role === 'student') {
+        await client.query(
+          `INSERT INTO Students (user_id, student_matric_no, department) 
          VALUES ($1, $2, $3)`,
-        [user.id, roleSpecificId, department || 'Not Specified']
-      )
-    } else if (role === 'supervisor') {
-      await client.query(
-        `INSERT INTO Supervisors (user_id, staff_id) 
+          [user.id, roleSpecificId, department || 'Not Specified']
+        )
+      } else if (role === 'supervisor') {
+        await client.query(
+          `INSERT INTO Supervisors (user_id, staff_id) 
          VALUES ($1, $2)`,
-        [user.id, roleSpecificId]
-      )
+          [user.id, roleSpecificId]
+        )
+      }
+
+      await client.query('COMMIT')
+      return user
+
+    } catch (err) {
+      await client.query('ROLLBACK')
+      throw err
+    } finally {
+      client.release()
     }
-
-    await client.query('COMMIT')
-    return user
-
-  } catch (err) {
-    await client.query('ROLLBACK')
-    throw err
-  } finally {
-    client.release()
-  }
-},
+  },
   async findUserByEmail(email) {
     const res = await pool.query('SELECT * FROM Users WHERE email = $1', [email])
     return res.rows[0]

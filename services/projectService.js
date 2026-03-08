@@ -15,6 +15,7 @@ class ProjectService {
                 description,
                 supervisor,
                 Studentnames = [],
+                StudentIDs = [],
                 Tags = [],
                 category = 'General',
                 year,
@@ -36,6 +37,7 @@ class ProjectService {
                 status: 'Active',
                 supervisorRemark: finalRemark || 'Evaluation pending',
                 studentNames: Studentnames,
+                studentIds: StudentIDs,
                 supervisorId
             });
 
@@ -136,6 +138,7 @@ class ProjectService {
                 grade,
                 finalRemark,
                 Studentnames,
+                StudentIDs,
                 Tags
             } = projectData;
 
@@ -147,7 +150,8 @@ class ProjectService {
                 academicYear: year,
                 grade,
                 supervisorRemark: finalRemark,
-                studentNames: Studentnames
+                studentNames: Studentnames,
+                studentIds: StudentIDs
             });
 
             if (!updatedProject) {
@@ -298,6 +302,18 @@ class ProjectService {
             }
         }
 
+        // Parse student_ids if it's a JSON string
+        let studentIds = [];
+        if (project.student_ids) {
+            try {
+                studentIds = typeof project.student_ids === 'string'
+                    ? JSON.parse(project.student_ids)
+                    : project.student_ids;
+            } catch (e) {
+                studentIds = [];
+            }
+        }
+
         // Parse tags array
         let tags = [];
         if (project.tags) {
@@ -330,6 +346,7 @@ class ProjectService {
             supervisor_id: project.supervisor_id, // Add supervisor_id for filtering
             StudentCount: studentNames.length,
             Studentnames: studentNames,
+            StudentIDs: studentIds,
             Tags: tags,
             category: project.department || 'General',
             year: project.academic_year || new Date().getFullYear().toString(),

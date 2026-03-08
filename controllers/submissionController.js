@@ -142,19 +142,40 @@ exports.getStudentSubmission = async (req, res) => {
     try {
         const { studentId } = req.params;
 
-        const result = await db.query(
-            `SELECT s.*, p.title as project_title 
-             FROM Project_Submissions s
-             JOIN Projects p ON s.project_id = p.project_id
-             WHERE s.student_id = $1`,
+        // 1. Fetch student role & matric number
+        const studentInfoParams = await db.query(
+            'SELECT role, student_matric_no FROM Students WHERE user_id = $1',
             [studentId]
         );
 
-        if (result.rows.length === 0) {
-            return res.json({ submitted: false });
+        if (studentInfoParams.rows.length === 0) {
+            return res.status(404).json({ error: 'Student profile not found' });
         }
 
-        res.json({ submitted: true, submission: result.rows[0] });
+        const { role, student_matric_no } = studentInfoParams.rows[0];
+
+        // 2. Build query to check for submissions
+        let query = `
+             SELECT s.*, p.title as project_title 
+             FROM Project_Submissions s
+             JOIN Projects p ON s.project_id = p.project_id
+             WHERE s.student_id = $1
+        `;
+        let params = [studentId];
+
+        // If member, they can also see a submission where their matric is listed
+        if (role === 'member') {
+            query += ` OR p.student_ids LIKE $2`;
+            params.push(`%"${student_matric_no}"%`);
+        }
+
+        const result = await db.query(query, params);
+
+        if (result.rows.length === 0) {
+            return res.json({ submitted: false, role });
+        }
+
+        res.json({ submitted: true, role, submission: result.rows[0] });
     } catch (error) {
         console.error('Error fetching student submission:', error);
         res.status(500).json({ error: 'Internal server error' });

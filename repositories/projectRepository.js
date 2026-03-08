@@ -16,6 +16,7 @@ class ProjectRepository {
             supervisorId = null,
             supervisorRemark = null,
             studentNames,
+            studentIds,
             category,
             attachmentUrl = null,
             attachmentMetadata = null
@@ -24,8 +25,8 @@ class ProjectRepository {
         const query = `
             INSERT INTO Projects 
             (title, description, department, academic_year, grade, status, 
-             supervisor_id, supervisor_remark, student_names)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             supervisor_id, supervisor_remark, student_names, student_ids)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
         `;
 
@@ -38,7 +39,8 @@ class ProjectRepository {
             status,
             supervisorId,
             supervisorRemark,
-            JSON.stringify(studentNames || [])
+            JSON.stringify(studentNames || []),
+            JSON.stringify(studentIds || [])
         ];
 
         const result = await db.query(query, values);
@@ -146,7 +148,8 @@ class ProjectRepository {
             grade,
             status,
             supervisorRemark,
-            studentNames
+            studentNames,
+            studentIds
         } = projectData;
 
         const query = `
@@ -160,8 +163,9 @@ class ProjectRepository {
                 status = COALESCE($6, status),
                 supervisor_remark = COALESCE($7, supervisor_remark),
                 student_names = COALESCE($8, student_names),
+                student_ids = COALESCE($9, student_ids),
                 last_updated = CURRENT_TIMESTAMP
-            WHERE project_id = $9
+            WHERE project_id = $10
             RETURNING *
         `;
 
@@ -174,6 +178,7 @@ class ProjectRepository {
             status,
             supervisorRemark,
             studentNames ? JSON.stringify(studentNames) : null,
+            studentIds ? JSON.stringify(studentIds) : null,
             projectId
         ];
 
