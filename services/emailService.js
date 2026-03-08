@@ -44,7 +44,16 @@ if (!transporter && process.env.EMAIL_HOST) {
     }
   });
 } else if (!transporter) {
-  console.warn('⚠️  No email transport configured; email functions will be no‑ops');
+  const missing = [];
+  if (!process.env.EMAIL_HOST) missing.push('EMAIL_HOST');
+  if (!process.env.EMAIL_USER) missing.push('EMAIL_USER');
+  if (!process.env.EMAIL_PASS) missing.push('EMAIL_PASS');
+
+  if (missing.length > 0) {
+    console.warn(`⚠️  Email transport NOT configured. Missing variables: ${missing.join(', ')}`);
+  } else {
+    console.warn('⚠️  No email transport configured; email functions will be no‑ops');
+  }
 }
 
 const sendVerificationEmail = async (email, token) => {
