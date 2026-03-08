@@ -1,5 +1,5 @@
 const authService = require('../services/authservice')
-const jwt = require('jsonwebtoken')
+const jwt = require('../utils/jwt')
 const db = require('../Database')
 const emailService = require('../services/emailService')
 
@@ -32,7 +32,7 @@ exports.verifyEmail = async (req, res, next) => {
     if (!token) {
       return res.status(400).json({ error: 'Token is required' })
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token)
     const result = await db.query(
       'SELECT * FROM Users WHERE email = $1 AND verification_token = $2',
       [decoded.email, token]

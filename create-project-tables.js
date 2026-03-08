@@ -4,28 +4,18 @@ async function createProjectTables() {
     try {
         console.log('Creating project-related tables...');
 
-        // Create Supervisors table if it doesn't exist
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS Supervisors (
-                user_id SERIAL PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                first_name VARCHAR(100) NOT NULL,
-                last_name VARCHAR(100) NOT NULL,
-                department VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log('✓ Supervisors table created/verified');
+        // Supervisors table is managed by db.init() in Database.js
+        console.log('✓ Supervisors table reference maintained');
 
         // Create Projects table
         await db.query(`
             CREATE TABLE IF NOT EXISTS Projects (
                 project_id SERIAL PRIMARY KEY,
-                name VARCHAR(255),
+                -- name VARCHAR(255),
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 department VARCHAR(100) NOT NULL,
-                category VARCHAR(50),
+                -- category VARCHAR(50),
                 academic_year VARCHAR(20) NOT NULL,
                 grade VARCHAR(7),
                 status VARCHAR(20) DEFAULT 'Active' CHECK (status IN ('Active', 'Archived', 'Pending')),
@@ -33,9 +23,9 @@ async function createProjectTables() {
                 supervisor_id INT REFERENCES Users(id) ON DELETE SET NULL,
                 
                 supervisor_remark TEXT, 
-                
                 edit_approved BOOLEAN DEFAULT FALSE,
                 student_names TEXT,
+                student_ids TEXT DEFAULT '[]', -- Added for student project visibility
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );

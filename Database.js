@@ -46,12 +46,6 @@ module.exports = {
       ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP;
     `)
 
-    // Add student_ids column to Projects if it doesn't exist yet, this was added as a safer way to have students view their active projects, adn submission status.
-    await pool.query(`
-      ALTER TABLE Projects
-      ADD COLUMN IF NOT EXISTS student_ids TEXT DEFAULT '[]';
-    `)
-
     // Create Students table (child table)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS Students (

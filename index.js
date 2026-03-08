@@ -12,6 +12,7 @@ const submissionRoutes = require('./routes/submissionRoutes')
 const supervisorRoutes = require('./routes/supervisorRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
+const dropTables = require('./drop-tables')
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -46,12 +47,25 @@ console.log('Routes registered:')
 
 // Error handler must be last
 app.use(errorHandler)
+// Startup sequence
+const startServer = async () => {
+    try {
+        // Optional: Only reset if RESET_DB=true is in .env 
+        // to avoid wiping data on every single restart
+        if (process.env.RESET_DB === 'true') {
+            await dropTables();
+            console.log('✅ Database dropped and Cloudinary cleared');
+        }
 
-const initializeDatabase = require('./initialize-database')
+        const initializeDatabase = require('./initialize-database');
+        await initializeDatabase();
+        console.log('✅ Database initialized and ready');
 
-// Initialize database on startup
-initializeDatabase()
-    .then(() => console.log('✅ Database ready'))
-    .catch((err) => console.error('❌ DB init error:', err))
+        app.listen(PORT, () => console.log(`Backend listening at http://localhost:${PORT}`));
+    } catch (err) {
+        console.error('❌ Failed to start server:', err);
+        process.exit(1);
+    }
+};
 
-app.listen(PORT, () => console.log(`Backend listening at http://localhost:${PORT}`))
+startServer();
