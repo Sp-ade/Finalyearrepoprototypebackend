@@ -4,21 +4,21 @@ class RequestRepository {
     /**
      * Create a new access request
      */
-    async createRequest(studentId, projectId, reason) {
+    async createRequest(studentId, projectId, reason, mode = 'view') {
         const query = `
             INSERT INTO Access_Requests_Student 
-            (student_id, project_id, request_reason)
-            VALUES ($1, $2, $3)
+            (student_id, project_id, request_reason, mode)
+            VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
 
         try {
-            const result = await db.query(query, [studentId, projectId, reason]);
+            const result = await db.query(query, [studentId, projectId, reason, mode]);
             return result.rows[0];
         } catch (error) {
-            // Check for unique constraint violation (student already requested this project)
+            // Check for unique constraint violation (student already requested this project with this mode)
             if (error.code === '23505') {
-                throw new Error('You have already requested to join this project.');
+                throw new Error(`You have already submitted a ${mode} request for this project.`);
             }
             throw error;
         }
@@ -53,10 +53,12 @@ class RequestRepository {
                 r.*,
                 p.title as project_title,
                 s.first_name || ' ' || s.last_name as student_name,
-                s.email as student_email
+                s.email as student_email,
+                u.first_name || ' ' || u.last_name as supervisor_name
             FROM Access_Requests_Student r
             JOIN Projects p ON r.project_id = p.project_id
             JOIN Users s ON r.student_id = s.id
+            LEFT JOIN Users u ON p.supervisor_id = u.id
             WHERE p.supervisor_id = $1
             ORDER BY r.requested_at DESC
         `;

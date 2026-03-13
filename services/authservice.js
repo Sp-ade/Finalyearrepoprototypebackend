@@ -67,10 +67,16 @@ exports.getUserByEmail = async (email) => {
   }
 }
 
-exports.updatePassword = async (email, newPassword) => {
+exports.updatePassword = async (email, currentPassword, newPassword) => {
   const user = await userRepo.findByEmail(email)
   if (!user) {
     throw new Error('User not found')
+  }
+
+  // Verify current password
+  const isCorrect = await bcrypt.compare(currentPassword, user.password_hash)
+  if (!isCorrect) {
+    throw new Error('Incorrect current password')
   }
 
   // Check if new password is same as current

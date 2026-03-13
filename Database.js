@@ -125,6 +125,12 @@ module.exports = {
          VALUES ($1, $2)`,
           [user.id, roleSpecificId]
         )
+      } else if (role === 'admin') {
+        await client.query(
+          `INSERT INTO admins (user_id) 
+         VALUES ($1)`,
+          [user.id]
+        )
       }
 
       await client.query('COMMIT')
@@ -140,5 +146,28 @@ module.exports = {
   async findUserByEmail(email) {
     const res = await pool.query('SELECT * FROM Users WHERE email = $1', [email])
     return res.rows[0]
+  },
+  async ensureRequestModeColumn() {
+    try {
+      await pool.query(`
+        ALTER TABLE Access_Requests_Student 
+        ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'view' CHECK (mode IN ('view', 'edit'));
+      `);
+      
+      // Update UNIQUE constraint to include mode
+      // First drop old constraint if it exists (might be named by Postgres automatically)
+      // Usually it's access_requests_student_student_id_project_id_key
+      await pool.query(`
+        ALTER TABLE Access_Requests_Student 
+        DROP CONSTRAINT IF EXISTS access_requests_student_student_id_project_id_key;
+      `);
+      
+      await pool.query(`
+        ALTER TABLE Access_Requests_Student 
+        ADD CONSTRAINT access_requests_student_student_id_project_id_mode_key UNIQUE(student_id, project_id, mode);
+      `);
+    } catch (err) {
+      console.warn('Note: Request mode column/constraint update check finished (might have existed).');
+    }
   }
 }

@@ -20,7 +20,8 @@ async function initializeDatabase() {
         // Step 3: Create request tables
         console.log('Step 3: Creating request tables...');
         await createRequestTables();
-        console.log('✓ Request tables created\n');
+        await db.ensureRequestModeColumn();
+        console.log('✓ Request tables created/verified\n');
 
         // Step 4: Create submission tables
         console.log('Step 4: Creating submission tables...');

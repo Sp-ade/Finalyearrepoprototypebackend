@@ -83,7 +83,13 @@ class ProjectRepository {
             LEFT JOIN Project_Tags pt ON p.project_id = pt.project_id
             LEFT JOIN Tags t ON pt.tag_id = t.tag_id
             LEFT JOIN Project_Artifacts pa ON p.project_id = pa.project_id
-            WHERE p.status = 'Active'
+            -- Filter projects: Must be Active AND (no submission OR approved submission)
+            WHERE p.status = 'Active' 
+            AND (
+                NOT EXISTS (SELECT 1 FROM Project_Submissions WHERE project_id = p.project_id)
+                OR 
+                EXISTS (SELECT 1 FROM Project_Submissions WHERE project_id = p.project_id AND status = 'Approved')
+            )
             GROUP BY p.project_id, u.first_name, u.last_name
             ORDER BY p.created_at DESC
         `;

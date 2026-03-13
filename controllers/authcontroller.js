@@ -128,12 +128,12 @@ exports.sendTestEmail = async (req, res, next) => {
 
 exports.updatePassword = async (req, res, next) => {
   try {
-    const { email, newPassword } = req.body
-    if (!email || !newPassword) {
-      return res.status(400).json({ error: 'Email and newPassword are required' })
+    const { email, currentPassword, newPassword } = req.body
+    if (!email || !currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Email, currentPassword, and newPassword are required' })
     }
 
-    await authService.updatePassword(email, newPassword)
+    await authService.updatePassword(email, currentPassword, newPassword)
     res.json({ message: 'Password updated successfully' })
   } catch (err) {
     next(err)

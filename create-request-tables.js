@@ -26,8 +26,11 @@ async function createRequestTables() {
                 requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 reviewed_at TIMESTAMP,
                 
-                -- A student can't request the same project twice
-                UNIQUE(student_id, project_id)
+                -- Distinguish between 'view' and 'edit'
+                mode VARCHAR(20) DEFAULT 'view' CHECK (mode IN ('view', 'edit')),
+
+                -- A student can't request the same project twice with the same mode
+                UNIQUE(student_id, project_id, mode)
             );
         `);
         console.log('✓ Access_Requests_Student table created/verified');

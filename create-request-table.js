@@ -14,7 +14,8 @@ async function createRequestTable() {
                 supervisor_response TEXT,
                 requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 reviewed_at TIMESTAMP,
-                UNIQUE(student_id, project_id)
+                mode VARCHAR(20) DEFAULT 'view' CHECK (mode IN ('view', 'edit')),
+                UNIQUE(student_id, project_id, mode)
             );
         `);
 

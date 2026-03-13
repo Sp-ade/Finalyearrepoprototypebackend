@@ -23,7 +23,8 @@ class ProjectService {
                 finalRemark,
                 attachment = null,
                 attachments = null,
-                supervisorId
+                supervisorId,
+                status
             } = projectData;
 
             // Create the project
@@ -34,7 +35,7 @@ class ProjectService {
                 department: category,
                 academicYear: year || new Date().getFullYear().toString(),
                 grade: grade || 'Pending',
-                status: 'Active',
+                status: status || 'Active',
                 supervisorRemark: finalRemark || 'Evaluation pending',
                 studentNames: Studentnames,
                 studentIds: StudentIDs,

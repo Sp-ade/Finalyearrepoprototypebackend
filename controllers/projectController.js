@@ -61,17 +61,36 @@ const getProjectById = async (req, res) => {
 
         const project = result.project;
         let hasAccess = false;
+        let isSubmitter = false;
+        let editRequestApproved = false;
+        let submissionId = null;
+
+        // Automatically grant access to admins
+        if (req.headers['x-user-role'] === 'admin') {
+            hasAccess = true;
+        }
 
         // If studentId is provided, check access
-        if (studentId) {
+        if (studentId && !hasAccess) {
             // 1. Check if student is the submitter
             const submissionRes = await db.query(
-                'SELECT 1 FROM Project_Submissions WHERE project_id = $1 AND student_id = $2',
+                'SELECT submission_id FROM Project_Submissions WHERE project_id = $1 AND student_id = $2',
                 [id, studentId]
             );
 
             if (submissionRes.rows.length > 0) {
                 hasAccess = true;
+                isSubmitter = true;
+                submissionId = submissionRes.rows[0].submission_id;
+
+                // Check for approved edit request if they are the submitter
+                const editRequestRes = await db.query(
+                    "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'",
+                    [id, studentId]
+                );
+                if (editRequestRes.rows.length > 0) {
+                    editRequestApproved = true;
+                }
             } else {
                 // 2. Check if student is a participant (name match in Studentsnames)
                 const userRes = await db.query('SELECT first_name, last_name FROM Users WHERE id = $1', [studentId]);
@@ -92,7 +111,10 @@ const getProjectById = async (req, res) => {
 
         const responseData = {
             ...project,
-            hasAccess
+            hasAccess,
+            isSubmitter,
+            editRequestApproved,
+            submissionId
         };
 
         res.status(200).json(responseData);

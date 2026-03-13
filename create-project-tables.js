@@ -32,6 +32,11 @@ async function createProjectTables() {
         `);
         console.log('✓ Projects table created');
 
+        await db.query(`
+      ALTER TABLE Projects
+      ADD COLUMN IF NOT EXISTS student_names TEXT,
+      ADD COLUMN IF NOT EXISTS student_ids TEXT DEFAULT '[]';
+    `);
         // Create Project_Artifacts table
         await db.query(`
             CREATE TABLE IF NOT EXISTS Project_Artifacts (

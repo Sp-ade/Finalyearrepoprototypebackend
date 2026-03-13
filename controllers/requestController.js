@@ -5,14 +5,14 @@ const requestRepository = require('../repositories/requestRepository');
  */
 const createRequest = async (req, res) => {
     try {
-        const { studentId, projectId, reason } = req.body;
+        const { studentId, projectId, reason, mode } = req.body;
 
         // TODO: Validate input
         if (!studentId || !projectId) {
             return res.status(400).json({ message: 'Student ID and Project ID are required' });
         }
 
-        const request = await requestRepository.createRequest(studentId, projectId, reason);
+        const request = await requestRepository.createRequest(studentId, projectId, reason, mode || 'view');
 
         res.status(201).json({
             success: true,
