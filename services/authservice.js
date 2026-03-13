@@ -2,7 +2,6 @@ const userRepo = require('../repositories/userRepository')
 const bcrypt = require('bcrypt')
 const jwt = require('../utils/jwt')
 const { sendLoginNotification } = require('../services/emailService')
-const db = require('../Database')
 
 exports.login = async (email, password) => {
   const user = await userRepo.findByEmail(email)
@@ -22,13 +21,6 @@ exports.login = async (email, password) => {
     role: user.role
   })
 
-  // Send login notification (the error is not fatal this way)
-  //
-  // try {
-  //   await sendLoginNotification(user.email)
-  // } catch (err) {
-  //   console.error('Login notification failed', err)
-  // }
   sendLoginNotification(user.email).catch(err => {
     console.error('Login notification failed', err)
   })
@@ -52,7 +44,6 @@ exports.getUserByEmail = async (email) => {
     throw new Error('User not found')
   }
 
-  // Fetch role-specific data
   const roleData = await userRepo.getRoleSpecificData(user.id, user.role)
 
   return {
@@ -63,8 +54,29 @@ exports.getUserByEmail = async (email) => {
     role: user.role,
     createdAt: user.created_at,
     isActive: user.is_active,
-    ...roleData // Spread role-specific fields (matricNo, department, or staffId)
+    ...roleData
   }
+}
+
+exports.verifyEmail = async (token, decodedEmail) => {
+  const user = await userRepo.findByVerificationToken(decodedEmail, token)
+  if (!user) {
+    const error = new Error('Invalid or expired token')
+    error.statusCode = 400
+    throw error
+  }
+  await userRepo.markAsVerified(decodedEmail)
+}
+
+exports.forceVerify = async (email) => {
+  await userRepo.ensureVerificationColumns()
+  const user = await userRepo.forceVerifyByEmail(email)
+  if (!user) {
+    const error = new Error('User not found')
+    error.statusCode = 404
+    throw error
+  }
+  return user
 }
 
 exports.updatePassword = async (email, currentPassword, newPassword) => {
@@ -73,13 +85,11 @@ exports.updatePassword = async (email, currentPassword, newPassword) => {
     throw new Error('User not found')
   }
 
-  // Verify current password
   const isCorrect = await bcrypt.compare(currentPassword, user.password_hash)
   if (!isCorrect) {
     throw new Error('Incorrect current password')
   }
 
-  // Check if new password is same as current
   const isSame = await bcrypt.compare(newPassword, user.password_hash)
   if (isSame) {
     throw new Error('New password cannot be the same as current password')
@@ -87,11 +97,81 @@ exports.updatePassword = async (email, currentPassword, newPassword) => {
 
   const saltRounds = 10
   const passwordHash = await bcrypt.hash(newPassword, saltRounds)
-
-  const result = await db.query(
-    'UPDATE Users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id',
-    [passwordHash, user.id]
-  )
-
-  return result.rows[0]
+  return await userRepo.updatePasswordHash(user.id, passwordHash)
 }
+
+exports.signup = async ({ email, password, firstName, lastName, role, studentId, department }) => {
+  // Validate required fields
+  if (!email || !password || !firstName || !lastName || !role || !studentId) {
+    const error = new Error('All fields are required')
+    error.statusCode = 400
+    throw error
+  }
+
+  // Validate department for students
+  if (role === 'student' && !department) {
+    const error = new Error('Department is required for students')
+    error.statusCode = 400
+    throw error
+  }
+
+  // Validate email domain
+  if (!email.endsWith('@nileuniversity.edu.ng')) {
+    const error = new Error('Email must be from @nileuniversity.edu.ng domain')
+    error.statusCode = 400
+    throw error
+  }
+
+  // Validate student email format (digits only before @)
+  if (role === 'student') {
+    const emailPrefix = email.split('@')[0]
+    if (!/^\d+$/.test(emailPrefix)) {
+      const error = new Error('Student email must be digits@nileuniversity.edu.ng (e.g., 123456@nileuniversity.edu.ng)')
+      error.statusCode = 400
+      throw error
+    }
+  }
+
+  // Validate role
+  if (!['student', 'supervisor'].includes(role)) {
+    const error = new Error('Role must be either student or supervisor')
+    error.statusCode = 400
+    throw error
+  }
+
+  // Validate password length
+  if (password.length < 6) {
+    const error = new Error('Password must be at least 6 characters long')
+    error.statusCode = 400
+    throw error
+  }
+
+  // Hash password
+  const passwordHash = await bcrypt.hash(password, 10)
+
+  // Generate verification token (1 hour expiry)
+  const verificationToken = jwt.sign({ email }, { expiresIn: '1h' })
+  const verificationExpiry = new Date(Date.now() + 60 * 60 * 1000)
+
+  // Create user record
+  const { sendVerificationEmail } = require('../services/emailService')
+  const user = await userRepo.create(email, passwordHash, firstName, lastName, role, studentId, department, verificationToken, verificationExpiry)
+
+  if (!user) {
+    const error = new Error('User with this email or ID already exists')
+    error.statusCode = 409
+    throw error
+  }
+
+  // Send verification email
+  await sendVerificationEmail(email, verificationToken)
+
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    role: user.role
+  }
+}
+

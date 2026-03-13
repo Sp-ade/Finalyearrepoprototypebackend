@@ -14,7 +14,7 @@ const data = JSON.stringify({
 const options = {
     hostname: 'localhost',
     port: 3000,
-    path: '/api/signup',
+    path: '/api/auth/signup',
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -22,7 +22,7 @@ const options = {
     }
 };
 
-console.log('Testing POST /api/signup...');
+console.log('Testing POST /api/auth/signup...');
 
 const req = http.request(options, (res) => {
     console.log(`Status Code: ${res.statusCode}`);

@@ -1,4 +1,4 @@
-const requestRepository = require('../repositories/requestRepository');
+const requestService = require('../services/requestService');
 
 /**
  * Create a new access request
@@ -6,27 +6,12 @@ const requestRepository = require('../repositories/requestRepository');
 const createRequest = async (req, res) => {
     try {
         const { studentId, projectId, reason, mode } = req.body;
-
-        // TODO: Validate input
-        if (!studentId || !projectId) {
-            return res.status(400).json({ message: 'Student ID and Project ID are required' });
-        }
-
-        const request = await requestRepository.createRequest(studentId, projectId, reason, mode || 'view');
-
-        res.status(201).json({
-            success: true,
-            message: 'Request submitted successfully',
-            request
-        });
+        const request = await requestService.createRequest(studentId, projectId, reason, mode || 'view');
+        res.status(201).json({ success: true, message: 'Request submitted successfully', request });
     } catch (error) {
         console.error('Error creating request:', error);
-
-        if (error.message === 'You have already requested to join this project.') {
-            return res.status(409).json({ message: error.message });
-        }
-
-        res.status(500).json({ message: 'Error submitting request', error: error.message });
+        const status = error.statusCode || (error.message.includes('already submitted') ? 409 : 500);
+        res.status(status).json({ message: error.message || 'Error submitting request' });
     }
 };
 
@@ -36,20 +21,11 @@ const createRequest = async (req, res) => {
 const getStudentRequests = async (req, res) => {
     try {
         const { studentId } = req.params;
-
-        if (!studentId) {
-            return res.status(400).json({ message: 'Student ID is required' });
-        }
-
-        const requests = await requestRepository.getRequestsByStudent(studentId);
-
-        res.status(200).json({
-            success: true,
-            requests
-        });
+        const requests = await requestService.getStudentRequests(studentId);
+        res.status(200).json({ success: true, requests });
     } catch (error) {
         console.error('Error fetching student requests:', error);
-        res.status(500).json({ message: 'Error fetching requests', error: error.message });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Error fetching requests' });
     }
 };
 
@@ -59,47 +35,26 @@ const getStudentRequests = async (req, res) => {
 const getSupervisorRequests = async (req, res) => {
     try {
         const { supervisorId } = req.params;
-
-        if (!supervisorId) {
-            return res.status(400).json({ message: 'Supervisor ID is required' });
-        }
-
-        const requests = await requestRepository.getRequestsBySupervisor(supervisorId);
-
-        res.status(200).json({
-            success: true,
-            requests
-        });
+        const requests = await requestService.getSupervisorRequests(supervisorId);
+        res.status(200).json({ success: true, requests });
     } catch (error) {
         console.error('Error fetching supervisor requests:', error);
-        res.status(500).json({ message: 'Error fetching requests', error: error.message });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Error fetching requests' });
     }
 };
 
 /**
- * Update request status (for supervisor or student editing?)
- * For now, mostly for supervisor, but student might maybe edit reason if pending?
- * Let's assume this is mostly for supervisor actions or status updates.
+ * Update request status
  */
 const updateRequest = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, response } = req.body;
-
-        const updatedRequest = await requestRepository.updateRequestStatus(id, status, response);
-
-        if (!updatedRequest) {
-            return res.status(404).json({ message: 'Request not found' });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Request updated',
-            request: updatedRequest
-        });
+        const request = await requestService.updateRequest(id, status, response);
+        res.status(200).json({ success: true, message: 'Request updated', request });
     } catch (error) {
         console.error('Error updating request:', error);
-        res.status(500).json({ message: 'Error updating request', error: error.message });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Error updating request' });
     }
 };
 
@@ -109,19 +64,11 @@ const updateRequest = async (req, res) => {
 const deleteRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const deleted = await requestRepository.deleteRequest(id);
-
-        if (!deleted) {
-            return res.status(404).json({ message: 'Request not found' });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Request deleted'
-        });
+        await requestService.deleteRequest(id);
+        res.status(200).json({ success: true, message: 'Request deleted' });
     } catch (error) {
         console.error('Error deleting request:', error);
-        res.status(500).json({ message: 'Error deleting request', error: error.message });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Error deleting request' });
     }
 };
 

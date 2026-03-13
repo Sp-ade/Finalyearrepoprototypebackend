@@ -1,29 +1,11 @@
-const { deleteFile } = require('../utils/cloudinary');
+const uploadService = require('../services/uploadService');
 
 /**
  * Handle profile picture upload
  */
 const uploadProfilePicture = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'No file uploaded'
-            });
-        }
-
-        // File is automatically uploaded to Cloudinary via multer middleware
-        const fileData = {
-            url: req.file.path, // Cloudinary URL
-            publicId: req.file.filename, // Cloudinary public ID
-            originalName: req.file.originalname,
-            size: req.file.size,
-            format: req.file.format
-        };
-
-        // TODO: Save fileData to database associated with user
-        // Example: await updateUserProfilePicture(userId, fileData.url, fileData.publicId);
-
+        const fileData = uploadService.processUpload(req.file);
         res.status(200).json({
             success: true,
             message: 'Profile picture uploaded successfully',
@@ -31,10 +13,9 @@ const uploadProfilePicture = async (req, res) => {
         });
     } catch (error) {
         console.error('Error uploading profile picture:', error);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             success: false,
-            message: 'Error uploading profile picture',
-            error: error.message
+            message: error.message || 'Error uploading profile picture'
         });
     }
 };
@@ -44,24 +25,7 @@ const uploadProfilePicture = async (req, res) => {
  */
 const uploadDocument = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                message: 'No file uploaded'
-            });
-        }
-
-        const fileData = {
-            url: req.file.path,
-            publicId: req.file.filename,
-            originalName: req.file.originalname,
-            size: req.file.size,
-            format: req.file.format
-        };
-
-        // TODO: Save document info to database
-        // Example: await saveDocument(userId, fileData);
-
+        const fileData = uploadService.processUpload(req.file);
         res.status(200).json({
             success: true,
             message: 'Document uploaded successfully',
@@ -69,10 +33,9 @@ const uploadDocument = async (req, res) => {
         });
     } catch (error) {
         console.error('Error uploading document:', error);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             success: false,
-            message: 'Error uploading document',
-            error: error.message
+            message: error.message || 'Error uploading document'
         });
     }
 };
@@ -82,23 +45,7 @@ const uploadDocument = async (req, res) => {
  */
 const uploadMultipleFiles = async (req, res) => {
     try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'No files uploaded'
-            });
-        }
-
-        const filesData = req.files.map(file => ({
-            url: file.path,
-            publicId: file.filename,
-            originalName: file.originalname,
-            size: file.size,
-            format: file.format
-        }));
-
-        // TODO: Save files info to database
-
+        const filesData = uploadService.processMultipleUploads(req.files);
         res.status(200).json({
             success: true,
             message: `${filesData.length} files uploaded successfully`,
@@ -106,10 +53,9 @@ const uploadMultipleFiles = async (req, res) => {
         });
     } catch (error) {
         console.error('Error uploading files:', error);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             success: false,
-            message: 'Error uploading files',
-            error: error.message
+            message: error.message || 'Error uploading files'
         });
     }
 };
@@ -120,34 +66,16 @@ const uploadMultipleFiles = async (req, res) => {
 const deleteUploadedFile = async (req, res) => {
     try {
         const { publicId } = req.params;
-
-        if (!publicId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Public ID is required'
-            });
-        }
-
-        const result = await deleteFile(publicId);
-
-        if (result.result === 'ok') {
-            // TODO: Also delete from database
-            res.status(200).json({
-                success: true,
-                message: 'File deleted successfully'
-            });
-        } else {
-            res.status(404).json({
-                success: false,
-                message: 'File not found'
-            });
-        }
+        await uploadService.deleteFile(publicId);
+        res.status(200).json({
+            success: true,
+            message: 'File deleted successfully'
+        });
     } catch (error) {
         console.error('Error deleting file:', error);
-        res.status(500).json({
+        res.status(error.statusCode || 500).json({
             success: false,
-            message: 'Error deleting file',
-            error: error.message
+            message: error.message || 'Error deleting file'
         });
     }
 };
