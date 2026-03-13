@@ -13,7 +13,7 @@ router.post('/force-verify', controller.forceVerify)
 router.post('/send-test-email', controller.sendTestEmail)
 // update user password
 router.post('/update-password', controller.updatePassword)
-//forgot your password
-router.post('/forgot-password', controller.forgotPassword)
+//forgot your password (not yet implemented)
+// router.post('/forgot-password', controller.forgotPassword)
 // router.post('/register', controller.register) // optional
 module.exports = router
