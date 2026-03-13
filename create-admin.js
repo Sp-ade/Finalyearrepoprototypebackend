@@ -9,6 +9,13 @@ async function createAdmin() {
         const lastName = 'Admin'
         const role = 'admin'
 
+        // Check if a user with this email already exists
+        const existing = await db.findUserByEmail(email)
+        if (existing) {
+            console.log(`User with email "${email}" already exists (id: ${existing.id}, role: ${existing.role}). Skipping creation.`)
+            return
+        }
+
         const hashed = await bcrypt.hash(password, 10)
 
         // We pass null for roleSpecificId and department for admin
@@ -20,13 +27,11 @@ async function createAdmin() {
             await db.query('UPDATE Users SET is_verified = true WHERE id = $1', [user.id])
             console.log('Admin user verified')
         } else {
-            console.log('User already exists or was not created')
+            console.log('User was not created')
         }
     } catch (err) {
         console.error('Error creating admin:', err)
-    } finally {
-        process.exit(0)
     }
 }
 
-createAdmin()
+module.exports = createAdmin

@@ -57,6 +57,8 @@ const startServer = async () => {
 
         const initializeDatabase = require('./initialize-database');
         await initializeDatabase();
+        const createAdmin = require('./create-admin');
+        await createAdmin();
         console.log('✅ Database initialized and ready');
 
         app.listen(PORT, () => console.log(`Backend listening at http://localhost:${PORT}`));
