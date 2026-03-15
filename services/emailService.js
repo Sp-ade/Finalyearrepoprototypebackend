@@ -10,6 +10,8 @@ if (dns.setDefaultResultOrder) {
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EMAIL_USER}>`;
 
+const dns = require('dns');
+
 // Configure transporter with Gmail-friendly defaults
 let transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.gmail.com",
@@ -18,6 +20,10 @@ let transporter = nodemailer.createTransport({
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
+  },
+  // CRITICAL: Force IPv4 for this specific connection
+  lookup: (hostname, options, callback) => {
+    dns.lookup(hostname, { family: 4 }, callback);
   },
   // STARTTLS settings for 587
   requireTLS: true,
