@@ -13,6 +13,7 @@ let transporter = nodemailer.createTransport({
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  family: 4, // CRITICAL: Force IPv4 to fix ENETUNREACH errors on Render
   tls: {
     // Helps with connection stability on Render
     rejectUnauthorized: false
