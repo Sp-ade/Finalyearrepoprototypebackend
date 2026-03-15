@@ -10,8 +10,6 @@ if (dns.setDefaultResultOrder) {
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EMAIL_USER}>`;
 
-const dns = require('dns');
-
 // Configure transporter with Gmail-friendly defaults
 let transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.gmail.com",
