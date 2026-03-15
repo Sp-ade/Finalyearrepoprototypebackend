@@ -1,21 +1,27 @@
 const nodemailer = require("nodemailer");
+const dns = require('dns');
+
+// Force IPv4 globally for this module to fix Render ENETUNREACH errors
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 // Get configurations from environment variables
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EMAIL_USER}>`;
 
-// Configure transporter with Gmail-friendly defaults and Render-ready SSL
+// Configure transporter with Gmail-friendly defaults
 let transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.EMAIL_PORT) || 465,
-  secure: (process.env.EMAIL_PORT == 465 || !process.env.EMAIL_PORT), // true for 465, false for 587
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: (process.env.EMAIL_PORT == 465), // Only true for 465
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  family: 4, // CRITICAL: Force IPv4 to fix ENETUNREACH errors on Render
+  // STARTTLS settings for 587
+  requireTLS: true,
   tls: {
-    // Helps with connection stability on Render
     rejectUnauthorized: false
   }
 });
