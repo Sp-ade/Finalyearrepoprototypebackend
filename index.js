@@ -59,6 +59,13 @@ const startServer = async () => {
         await initializeDatabase();
         const createAdmin = require('./create-admin');
         await createAdmin();
+
+        // One-time migration for leader assignments if requested
+        if (process.env.ASSIGN_SCRIPT === 'true') {
+            const migrateLeaderAssignments = require('./scripts/migrateLeaderAssignments');
+            await migrateLeaderAssignments();
+        }
+
         console.log('✅ Database initialized and ready');
 
         app.listen(PORT, () => console.log(`Backend listening at http://localhost:${PORT}`));
