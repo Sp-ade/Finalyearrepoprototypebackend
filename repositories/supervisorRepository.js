@@ -13,7 +13,8 @@ class SupervisorRepository {
                 u.email, 
                 s.student_matric_no, 
                 s.department, 
-                s.role 
+                s.role,
+                s.leader_assigned_by 
             FROM Users u
             JOIN Students s ON u.id = s.user_id
             WHERE u.role = 'student'
@@ -35,14 +36,14 @@ class SupervisorRepository {
     /**
      * Update student role in Students table
      */
-    async updateStudentRole(userId, role) {
+    async updateStudentRole(userId, role, assignedBy = null) {
         const query = `
             UPDATE Students 
-            SET role = $1 
-            WHERE user_id = $2 
+            SET role = $1, leader_assigned_by = $2 
+            WHERE user_id = $3 
             RETURNING *
         `;
-        const result = await db.query(query, [role, userId]);
+        const result = await db.query(query, [role, assignedBy, userId]);
         return result.rows[0];
     }
 }

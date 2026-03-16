@@ -21,7 +21,8 @@ async function initializeDatabase() {
         console.log('Step 3: Creating request tables...');
         await createRequestTables();
         await db.ensureRequestModeColumn();
-        console.log('✓ Request tables created/verified\n');
+        await db.ensureLeaderAssignedByColumn();
+        console.log('✓ Request tables created successfully!\n');
 
         // Step 4: Create submission tables
         console.log('Step 4: Creating submission tables...');

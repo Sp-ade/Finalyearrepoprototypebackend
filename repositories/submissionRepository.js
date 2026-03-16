@@ -135,10 +135,10 @@ class SubmissionRepository {
     }
 
     /**
-     * Reset a submission back to Pending for resubmission
+     * Reset a submission back to Pending for resubmission (context-aware)
      */
-    async resubmit(submissionId) {
-        const result = await db.query(
+    async resubmitWithTransaction(client, submissionId) {
+        const result = await client.query(
             `UPDATE Project_Submissions
              SET status = 'Pending', supervisor_response = NULL, reviewed_at = NULL
              WHERE submission_id = $1
@@ -146,6 +146,17 @@ class SubmissionRepository {
             [submissionId]
         );
         return result.rows[0] || null;
+    }
+
+    /**
+     * Revoke student edit access for a project
+     */
+    async revokeEditAccess(client, studentId, projectId) {
+        await client.query(
+            `DELETE FROM Access_Requests_Student 
+             WHERE student_id = $1 AND project_id = $2 AND mode = 'edit'`,
+            [studentId, projectId]
+        );
     }
 
     /**

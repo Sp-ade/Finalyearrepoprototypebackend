@@ -98,15 +98,38 @@ class SubmissionService {
 
     /**
      * Resubmit a previously reviewed submission
+     * Revokes edit access and clears approved status
      */
     async resubmit(submissionId) {
-        const result = await submissionRepository.resubmit(submissionId);
-        if (!result) {
-            const error = new Error('Submission not found');
-            error.statusCode = 404;
-            throw error;
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Get submission details
+            const submission = await submissionRepository.getById(submissionId);
+            if (!submission) {
+                const error = new Error('Submission not found');
+                error.statusCode = 404;
+                throw error;
+            }
+
+            // 2. Reset submission status to Pending
+            const updatedSubmission = await submissionRepository.resubmitWithTransaction(client, submissionId);
+
+            // 3. Revoke edit access (if any)
+            await submissionRepository.revokeEditAccess(client, submission.student_id, submission.project_id);
+
+            // 4. Update Project status to 'Under Review' (optional but cleaner)
+            // Note: Projects.status check in repo handles visibility based on submission status anyway.
+            
+            await client.query('COMMIT');
+            return updatedSubmission;
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
         }
-        return result;
     }
 }
 

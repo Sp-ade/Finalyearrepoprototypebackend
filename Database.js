@@ -52,7 +52,8 @@ module.exports = {
         user_id INTEGER PRIMARY KEY REFERENCES Users(id) ON DELETE CASCADE,
         student_matric_no VARCHAR(11) UNIQUE NOT NULL,
         department VARCHAR(100) NOT NULL,
-        role VARCHAR(20) DEFAULT 'member' NOT NULL CHECK (role IN ('leader', 'member'))
+        role VARCHAR(20) DEFAULT 'member' NOT NULL CHECK (role IN ('leader', 'member')),
+        leader_assigned_by INTEGER REFERENCES Users(id) ON DELETE SET NULL
       );
     `)
 
@@ -168,6 +169,16 @@ module.exports = {
       `);
     } catch (err) {
       console.warn('Note: Request mode column/constraint update check finished (might have existed).');
+    }
+  },
+  async ensureLeaderAssignedByColumn() {
+    try {
+      await pool.query(`
+        ALTER TABLE Students 
+        ADD COLUMN IF NOT EXISTS leader_assigned_by INTEGER REFERENCES Users(id) ON DELETE SET NULL;
+      `);
+    } catch (err) {
+      console.warn('Note: leader_assigned_by column update check finished.');
     }
   }
 }

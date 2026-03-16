@@ -15,10 +15,24 @@ exports.getAllStudents = async (req, res) => {
 exports.setStudentLeader = async (req, res) => {
     try {
         const { userId } = req.params;
-        const result = await supervisorService.setStudentLeader(userId);
+        const { supervisorId } = req.body;
+        const result = await supervisorService.setStudentLeader(userId, supervisorId);
         res.json({ message: 'Student successfully set as leader', student: result });
     } catch (error) {
         console.error('Error setting student as leader:', error);
+        res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+    }
+};
+
+// Unassign a student's leader role
+exports.unassignStudentLeader = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { supervisorId } = req.body;
+        const result = await supervisorService.unassignStudentLeader(userId, supervisorId);
+        res.json({ message: 'Student leader role removed', student: result });
+    } catch (error) {
+        console.error('Error unassigning student leader:', error);
         res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
     }
 };
