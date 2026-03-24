@@ -72,6 +72,19 @@ module.exports = {
         admin_level VARCHAR(20) DEFAULT 'Standard' -- e.g., 'SuperAdmin', 'Moderator'
       );
     `)
+
+    // Create Notifications table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Notifications(
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES Users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        type VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `)
   },
   async createUser(
     email,

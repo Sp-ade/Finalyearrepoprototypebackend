@@ -12,7 +12,26 @@ class SubmissionService {
             error.statusCode = 400;
             throw error;
         }
-        return await submissionRepository.create(studentId, projectId);
+        const submission = await submissionRepository.create(studentId, projectId);
+
+        // Notify supervisor
+        try {
+            const projectRepository = require('../repositories/projectRepository');
+            const project = await projectRepository.getProjectById(projectId);
+            if (project && project.supervisor_id) {
+                const notificationService = require('./notificationService');
+                notificationService.createNotification(
+                    project.supervisor_id, 
+                    'New Project Submission', 
+                    `A student has submitted their final year project "${project.title}" for review.`, 
+                    'new_submission'
+                ).catch(err => console.error('Error emitting submission notification:', err));
+            }
+        } catch (err) {
+            console.error('Notification service integration error:', err);
+        }
+
+        return submission;
     }
 
     /**
@@ -61,6 +80,27 @@ class SubmissionService {
             }
 
             await client.query('COMMIT');
+
+            // Trigger notification to the student asynchronously
+            try {
+                const notificationService = require('./notificationService');
+                
+                let title = 'Submission Reviewed';
+                let message = `Your project submission has been marked as '${status}'.`;
+                if (supervisor_response) {
+                    message += ` Supervisor feedback: "${supervisor_response}"`;
+                }
+                
+                notificationService.createNotification(
+                    submission.student_id,
+                    title,
+                    message,
+                    'submission_status_change'
+                ).catch(err => console.error('Error emitting submission notification:', err));
+            } catch (err) {
+                console.error('Notification service integration error:', err);
+            }
+
             return submission;
         } catch (err) {
             await client.query('ROLLBACK');
@@ -123,6 +163,24 @@ class SubmissionService {
             // Note: Projects.status check in repo handles visibility based on submission status anyway.
             
             await client.query('COMMIT');
+
+            // Notify supervisor of resubmission
+            try {
+                const projectRepository = require('../repositories/projectRepository');
+                const project = await projectRepository.getProjectById(submission.project_id);
+                if (project && project.supervisor_id) {
+                    const notificationService = require('./notificationService');
+                    notificationService.createNotification(
+                        project.supervisor_id, 
+                        'Project Resubmitted', 
+                        `A student has resubmitted their project "${project.title}" for review after making changes.`, 
+                        'resubmission'
+                    ).catch(err => console.error('Error emitting resubmission notification:', err));
+                }
+            } catch (err) {
+                console.error('Notification service integration error:', err);
+            }
+
             return updatedSubmission;
         } catch (err) {
             await client.query('ROLLBACK');

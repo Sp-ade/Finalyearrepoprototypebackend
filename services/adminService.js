@@ -1,4 +1,5 @@
 const db = require('../Database');
+const supervisorRepository = require('../repositories/supervisorRepository');
 
 class AdminService {
     /**
@@ -335,6 +336,99 @@ class AdminService {
         return {
             success: true,
             message: 'Tag deleted successfully'
+        };
+    }
+    /**
+     * Reassign the supervisor for a student leader (admin only).
+     * Used when a supervisor leaves abruptly and their assigned
+     * student leaders need to be transferred to a different supervisor.
+     */
+    async reassignLeaderSupervisor(studentUserId, newSupervisorId) {
+        // 1. Validate the student exists and is a leader
+        const student = await supervisorRepository.getStudentById(studentUserId);
+
+        if (!student) {
+            return {
+                success: false,
+                message: 'Student not found'
+            };
+        }
+
+        if (student.role !== 'leader') {
+            return {
+                success: false,
+                message: 'Student is not currently assigned as a leader'
+            };
+        }
+
+        // 2. Validate the new supervisor exists and has the supervisor role
+        const newSupervisor = await supervisorRepository.getUserRole(newSupervisorId);
+
+        if (!newSupervisor || newSupervisor.role !== 'supervisor') {
+            return {
+                success: false,
+                message: 'New supervisor not found or user is not a supervisor'
+            };
+        }
+
+        // 3. Perform the reassignment
+        const updated = await supervisorRepository.reassignLeaderSupervisor(studentUserId, newSupervisorId);
+
+        if (!updated) {
+            return {
+                success: false,
+                message: 'Failed to reassign supervisor'
+            };
+        }
+
+        return {
+            success: true,
+            message: 'Supervisor successfully reassigned for student leader',
+            student: updated
+        };
+    }
+    /**
+     * Reassign the supervisor for a project (admin only).
+     * Used so an admin can change the supervisor in charge of a student project/submission.
+     */
+    async reassignProjectSupervisor(projectId, newSupervisorId) {
+        // 1. Validate the project exists 
+        // We use an inline DB query or can use projectRepository if imported
+        // Wait, I need to fetch the project. Let's do it directly through projectRepository
+        const projectRepository = require('../repositories/projectRepository');
+        const project = await projectRepository.getProjectById(projectId);
+
+        if (!project) {
+            return {
+                success: false,
+                message: 'Project not found'
+            };
+        }
+
+        // 2. Validate the new supervisor exists and has the supervisor role
+        const newSupervisor = await supervisorRepository.getUserRole(newSupervisorId);
+
+        if (!newSupervisor || newSupervisor.role !== 'supervisor') {
+            return {
+                success: false,
+                message: 'New supervisor not found or user is not a supervisor'
+            };
+        }
+
+        // 3. Perform the reassignment
+        const updated = await projectRepository.reassignProjectSupervisor(projectId, newSupervisorId);
+
+        if (!updated) {
+            return {
+                success: false,
+                message: 'Failed to reassign supervisor to project'
+            };
+        }
+
+        return {
+            success: true,
+            message: 'Project successfully reassigned to new supervisor',
+            project: updated
         };
     }
 }

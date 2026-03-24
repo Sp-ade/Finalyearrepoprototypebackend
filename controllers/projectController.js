@@ -44,6 +44,26 @@ const requestRepository = require('../repositories/requestRepository');
 const db = require('../Database');
 
 /**
+ * Get all tags
+ */
+const getAllTags = async (req, res) => {
+    try {
+        const result = await db.query('SELECT name FROM Tags ORDER BY name ASC');
+        res.status(200).json({
+            success: true,
+            tags: result.rows.map(row => row.name)
+        });
+    } catch (error) {
+        console.error('Error fetching tags:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching tags',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get a single project by ID
  */
 const getProjectById = async (req, res) => {
@@ -188,5 +208,6 @@ module.exports = {
     getAllProjects,
     getProjectById,
     updateProject,
-    deleteProject
+    deleteProject,
+    getAllTags
 };

@@ -269,6 +269,20 @@ class ProjectRepository {
 
         await db.query(query, [projectId]);
     }
+    /**
+     * Reassign the supervisor for a project
+     */
+    async reassignProjectSupervisor(projectId, newSupervisorId) {
+        const query = `
+            UPDATE Projects 
+            SET supervisor_id = $1,
+                last_updated = CURRENT_TIMESTAMP
+            WHERE project_id = $2 
+            RETURNING *
+        `;
+        const result = await db.query(query, [newSupervisorId, projectId]);
+        return result.rows[0];
+    }
 }
 
 module.exports = new ProjectRepository();

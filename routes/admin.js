@@ -26,4 +26,8 @@ router.get('/tags', adminController.getAllTags);
 router.put('/tags/:id', adminController.updateTag);
 router.delete('/tags/:id', adminController.deleteTag);
 
+// Supervisor Reassignment Route
+router.put('/students/:studentId/reassign-supervisor', adminController.reassignLeaderSupervisor);
+router.put('/projects/:projectId/reassign-supervisor', adminController.reassignProjectSupervisor);
+
 module.exports = router;

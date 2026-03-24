@@ -41,6 +41,10 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/submissions', submissionRoutes)
 app.use('/api/supervisors', supervisorRoutes)
 
+// Real-time notifications SSE Mount
+const notificationRoutes = require('./routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes)
+
 console.log('Routes registered:')
 
 // Error handler must be last
@@ -60,7 +64,7 @@ const startServer = async () => {
         const createAdmin = require('./create-admin');
         await createAdmin();
 
-        // One-time migration for leader assignments if requested
+        // One-time migration for leader assign link between students and supervisors
         if (process.env.ASSIGN_SCRIPT === 'true') {
             const migrateLeaderAssignments = require('./scripts/migrateLeaderAssignments');
             await migrateLeaderAssignments();

@@ -203,6 +203,76 @@ const deleteTag = async (req, res) => {
     }
 };
 
+/**
+ * Reassign supervisor for a student leader
+ */
+const reassignLeaderSupervisor = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { newSupervisorId } = req.body;
+
+        if (!newSupervisorId) {
+            return res.status(400).json({
+                success: false,
+                message: 'New supervisor ID is required'
+            });
+        }
+
+        const result = await adminService.reassignLeaderSupervisor(
+            parseInt(studentId),
+            parseInt(newSupervisorId)
+        );
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error reassigning leader supervisor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error reassigning supervisor',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Reassign supervisor for a project
+ */
+const reassignProjectSupervisor = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { newSupervisorId } = req.body;
+
+        if (!newSupervisorId) {
+            return res.status(400).json({
+                success: false,
+                message: 'New supervisor ID is required'
+            });
+        }
+
+        const result = await adminService.reassignProjectSupervisor(
+            parseInt(projectId),
+            parseInt(newSupervisorId)
+        );
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error reassigning project supervisor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error reassigning supervisor',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     getUserStats,
@@ -213,5 +283,7 @@ module.exports = {
     getDashboardAnalytics,
     getAllTags,
     updateTag,
-    deleteTag
+    deleteTag,
+    reassignLeaderSupervisor,
+    reassignProjectSupervisor
 };

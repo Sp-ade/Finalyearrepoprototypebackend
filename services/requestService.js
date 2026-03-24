@@ -10,7 +10,24 @@ class RequestService {
             error.statusCode = 400;
             throw error;
         }
-        return await requestRepository.createRequest(studentId, projectId, reason, mode);
+        const request = await requestRepository.createRequest(studentId, projectId, reason, mode);
+
+        // Notify supervisor
+        try {
+            const projectRepository = require('../repositories/projectRepository');
+            const project = await projectRepository.getProjectById(projectId);
+            if (project && project.supervisor_id) {
+                const notificationService = require('./notificationService');
+                const title = 'New Access Request';
+                const message = `A student has submitted a new ${mode} request for the project "${project.title}".`;
+                notificationService.createNotification(project.supervisor_id, title, message, 'new_request')
+                    .catch(err => console.error('Error emitting request notification:', err));
+            }
+        } catch (err) {
+            console.error('Notification service integration error:', err);
+        }
+
+        return request;
     }
 
     /**
@@ -47,6 +64,28 @@ class RequestService {
             error.statusCode = 404;
             throw error;
         }
+
+        // Trigger notification to the student asynchronously
+        try {
+            const notificationService = require('./notificationService');
+            
+            let title = 'Access Request Updated';
+            let message = `Your access request has been officially ${status.toLowerCase()}.`;
+            if (response) {
+                message += ` Supervisor note: "${response}"`;
+            }
+
+            // Call createNotification asynchronously so we don't block the API response
+            notificationService.createNotification(
+                updated.student_id,
+                title,
+                message,
+                'request_status_change'
+            ).catch(err => console.error('Error emitting request notification:', err));
+        } catch (err) {
+            console.error('Notification service integration error:', err);
+        }
+
         return updated;
     }
 
