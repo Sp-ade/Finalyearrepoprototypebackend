@@ -3,10 +3,12 @@ const submissionService = require('../services/submissionService');
 // Create a new submission
 exports.createSubmission = async (req, res) => {
     try {
-        const { student_id, project_id } = req.body;
+        // IDOR Fix: Use student ID from JWT instead of req.body
+        const student_id = req.user.sub;
+        const { project_id } = req.body;
 
-        if (!student_id || !project_id) {
-            return res.status(400).json({ error: 'Student ID and Project ID are required' });
+        if (!project_id) {
+            return res.status(400).json({ error: 'Project ID is required' });
         }
 
         const submission = await submissionService.submitProject(student_id, project_id);
@@ -32,7 +34,8 @@ exports.getSubmissionsByProject = async (req, res) => {
 // Get all submissions (for supervisor dashboard)
 exports.getAllSubmissions = async (req, res) => {
     try {
-        const { supervisorId } = req.query;
+        // IDOR Fix: Use supervisor ID from JWT, ignore query params
+        const supervisorId = req.user.sub;
         const submissions = await submissionService.getAll(supervisorId);
         res.json(submissions);
     } catch (error) {
@@ -63,7 +66,8 @@ exports.reviewSubmission = async (req, res) => {
 // Get a student's submission status
 exports.getStudentSubmission = async (req, res) => {
     try {
-        const { studentId } = req.params;
+        // IDOR Fix: Use student ID from JWT, ignore params
+        const studentId = req.user.sub;
         const result = await submissionService.getStudentSubmission(studentId);
         res.json(result);
     } catch (error) {

@@ -6,17 +6,35 @@ exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body
     const result = await authService.login(email, password)
-    res.json(result)
+    
+    // Set cookie
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 3600000 // 1 hour
+    });
+
+    res.json({
+      success: true,
+      user: result.user
+    });
   } catch (err) {
     next(err)
   }
 }
 
+exports.logout = async (req, res) => {
+  res.clearCookie('token');
+  res.json({ success: true, message: 'Logged out successfully' });
+}
+
 exports.getUserByEmail = async (req, res, next) => {
   try {
-    const { email } = req.query
+    // IDOR Fix: Always use the email from the verified JWT, ignore client-supplied query param
+    const email = req.user.email
     if (!email) {
-      return res.status(400).json({ error: 'Email is required' })
+      return res.status(401).json({ error: 'Authentication required' })
     }
     const user = await authService.getUserByEmail(email)
     res.json(user)
@@ -89,9 +107,11 @@ exports.sendTestEmail = async (req, res, next) => {
 
 exports.updatePassword = async (req, res, next) => {
   try {
-    const { email, currentPassword, newPassword } = req.body
-    if (!email || !currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Email, currentPassword, and newPassword are required' })
+    // IDOR Fix: Use email from JWT instead of req.body
+    const email = req.user.email
+    const { currentPassword, newPassword } = req.body
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword and newPassword are required' })
     }
     await authService.updatePassword(email, currentPassword, newPassword)
     res.json({ message: 'Password updated successfully' })

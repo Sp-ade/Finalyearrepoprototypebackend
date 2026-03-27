@@ -15,7 +15,8 @@ exports.getAllStudents = async (req, res) => {
 exports.setStudentLeader = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { supervisorId } = req.body;
+        // IDOR Fix: Use supervisor ID from JWT instead of req.body
+        const supervisorId = req.user.sub;
         const result = await supervisorService.setStudentLeader(userId, supervisorId);
         res.json({ message: 'Student successfully set as leader', student: result });
     } catch (error) {
@@ -28,7 +29,8 @@ exports.setStudentLeader = async (req, res) => {
 exports.unassignStudentLeader = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { supervisorId } = req.body;
+        // IDOR Fix: Use supervisor ID from JWT instead of req.body
+        const supervisorId = req.user.sub;
         const result = await supervisorService.unassignStudentLeader(userId, supervisorId);
         res.json({ message: 'Student leader role removed', student: result });
     } catch (error) {

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const submissionController = require('../controllers/submissionController');
+const authenticate = require('../middleware/auth');
+
+router.use(authenticate);
 
 // Submit a project
 router.post('/', submissionController.createSubmission);
@@ -10,6 +13,7 @@ router.get('/project/:projectId', submissionController.getSubmissionsByProject);
 
 // Get a specific student's submission status
 router.get('/student/:studentId', submissionController.getStudentSubmission);
+router.get('/student', submissionController.getStudentSubmission);
 
 // Get all supervisors
 router.get('/supervisors', submissionController.getAllSupervisors);

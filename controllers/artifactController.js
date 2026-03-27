@@ -6,7 +6,8 @@ const artifactService = require('../services/artifactService');
 const uploadProjectArtifact = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const uploadedBy = req.body.uploadedBy || null; // Get from auth middleware later
+        // IDOR Fix: Use user ID from JWT instead of req.body
+        const uploadedBy = req.user.sub; 
 
         if (!req.file) {
             return res.status(400).json({

@@ -1,4 +1,14 @@
-const db = require('./Database')
+require('dotenv').config();
+
+// Security Guard: Prevent accidental execution in production
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DANGEROUS_SCRIPTS !== 'true') {
+  console.error('\n❌ ERROR: SEEDING BLOCKED');
+  console.error('This script (init-db) is restricted in production to prevent accidental data modification.');
+  console.error('To override, set ALLOW_DANGEROUS_SCRIPTS=true in your environment.\n');
+  process.exit(1);
+}
+
+const db = require('../Database')
 const bcrypt = require('bcrypt')
 
 async function run() {

@@ -1,6 +1,15 @@
-const db = require('./Database');
-const { cloudinary } = require('./utils/cloudinary');
 require('dotenv').config();
+
+// Security Guard: Prevent accidental execution in production
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DANGEROUS_SCRIPTS !== 'true') {
+    console.error('\n❌ ERROR: DANGEROUS OPERATION BLOCKED');
+    console.error('This script (drop-tables) is restricted in production to prevent data loss.');
+    console.error('To override, set ALLOW_DANGEROUS_SCRIPTS=true in your environment.\n');
+    process.exit(1);
+}
+
+const db = require('../Database');
+const { cloudinary } = require('../utils/cloudinary');
 
 /**
  * Extracts Cloudinary public ID and resource type from a URL

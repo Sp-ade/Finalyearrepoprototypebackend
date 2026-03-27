@@ -11,12 +11,16 @@ const submissionRoutes = require('./routes/submissionRoutes')
 const supervisorRoutes = require('./routes/supervisorRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
-const dropTables = require('./drop-tables')
+const dropTables = require('./scripts/drop-tables')
 
 const PORT = process.env.PORT || 3000
 const app = express()
+const cookieParser = require('cookie-parser')
+const helmet = require('helmet')
 
+app.use(helmet())
 app.use(express.json())
+app.use(cookieParser())
 app.use(cors({
     origin: [
         'http://localhost:5173',
@@ -33,9 +37,9 @@ app.use((req, res, next) => {
 })
 
 app.use('/api', authRoutes)
+app.use('/api/projects', artifactRoutes)
 app.use('/api/projects', projectsRoutes)
 app.use('/api/upload', uploadRoutes)
-app.use('/api/projects', artifactRoutes)
 app.use('/api/requests', requestRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/submissions', submissionRoutes)

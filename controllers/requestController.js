@@ -5,7 +5,9 @@ const requestService = require('../services/requestService');
  */
 const createRequest = async (req, res) => {
     try {
-        const { studentId, projectId, reason, mode } = req.body;
+        // IDOR Fix: Use student ID from JWT instead of req.body
+        const studentId = req.user.sub;
+        const { projectId, reason, mode } = req.body;
         const request = await requestService.createRequest(studentId, projectId, reason, mode || 'view');
         res.status(201).json({ success: true, message: 'Request submitted successfully', request });
     } catch (error) {
@@ -20,7 +22,8 @@ const createRequest = async (req, res) => {
  */
 const getStudentRequests = async (req, res) => {
     try {
-        const { studentId } = req.params;
+        // IDOR Fix: Use student ID from JWT, ignore params
+        const studentId = req.user.sub;
         const requests = await requestService.getStudentRequests(studentId);
         res.status(200).json({ success: true, requests });
     } catch (error) {
@@ -34,7 +37,8 @@ const getStudentRequests = async (req, res) => {
  */
 const getSupervisorRequests = async (req, res) => {
     try {
-        const { supervisorId } = req.params;
+        // IDOR Fix: Use supervisor ID from JWT, ignore params
+        const supervisorId = req.user.sub;
         const requests = await requestService.getSupervisorRequests(supervisorId);
         res.status(200).json({ success: true, requests });
     } catch (error) {

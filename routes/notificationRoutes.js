@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
+const authenticate = require('../middleware/auth');
+
+router.use(authenticate);
 
 // Main SSE Stream endpoint (MUST BE A GET REQUEST)
 router.get('/stream', notificationController.streamNotifications);

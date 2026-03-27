@@ -1,7 +1,11 @@
 const express = require('express');
 const projectController = require('../controllers/projectController');
+const authenticate = require('../middleware/auth');
 
 const router = express.Router();
+
+// Apply authentication to all routes
+router.use(authenticate);
 
 // GET all projects
 router.get('/', projectController.getAllProjects);

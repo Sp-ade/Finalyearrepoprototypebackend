@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const supervisorController = require('../controllers/supervisorController');
+const authenticate = require('../middleware/auth');
 
-// Get all students
+router.use(authenticate);
+
+// Get supervisor dashboard stats
 router.get('/students', supervisorController.getAllStudents);
 
 // Set a student as leader

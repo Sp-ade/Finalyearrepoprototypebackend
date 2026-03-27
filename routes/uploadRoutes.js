@@ -7,6 +7,9 @@ const {
     uploadMultipleFiles,
     deleteUploadedFile
 } = require('../controllers/uploadController');
+const authenticate = require('../middleware/auth');
+
+router.use(authenticate);
 
 // Upload profile picture (single file)
 router.post('/profile-picture', uploads.profilePicture.single('profilePicture'), uploadProfilePicture);

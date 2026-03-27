@@ -4,12 +4,11 @@ const notificationService = require('../services/notificationService');
  * Handle Server-Sent Events (SSE) connection for a specific user
  */
 const streamNotifications = (req, res) => {
-    // The user ID should ideally come from auth middleware, but since
-    // it seems the frontend might pass it in query/headers for this setup:
-    const userId = req.headers['x-user-id'] || req.query.userId;
+    // IDOR Fix: Use user ID from verified JWT (via authenticate middleware)
+    const userId = req.user.sub;
 
     if (!userId) {
-        return res.status(401).json({ error: 'User ID is required for notification stream' });
+        return res.status(401).json({ error: 'Authentication required' });
     }
 
     // Set headers required for Server-Sent Events
@@ -43,10 +42,11 @@ const streamNotifications = (req, res) => {
  */
 const getUnreadNotifications = async (req, res) => {
     try {
-        const userId = req.headers['x-user-id'] || req.query.userId;
+        // IDOR Fix: Use user ID from JWT
+        const userId = req.user.sub;
         
         if (!userId) {
-            return res.status(401).json({ error: 'User ID is required' });
+            return res.status(401).json({ error: 'Authentication required' });
         }
 
         const notifications = await notificationService.getUnreadNotifications(parseInt(userId));
@@ -62,11 +62,12 @@ const getUnreadNotifications = async (req, res) => {
  */
 const markAsRead = async (req, res) => {
     try {
-        const userId = req.headers['x-user-id'] || req.body.userId;
+        // IDOR Fix: Use user ID from JWT
+        const userId = req.user.sub;
         const { id } = req.params;
 
         if (!userId) {
-            return res.status(401).json({ error: 'User ID is required' });
+            return res.status(401).json({ error: 'Authentication required' });
         }
 
         const updated = await notificationService.markNotificationAsRead(parseInt(id), parseInt(userId));
@@ -82,10 +83,11 @@ const markAsRead = async (req, res) => {
  */
 const markAllAsRead = async (req, res) => {
     try {
-        const userId = req.headers['x-user-id'] || req.body.userId;
+        // IDOR Fix: Use user ID from JWT
+        const userId = req.user.sub;
 
         if (!userId) {
-            return res.status(401).json({ error: 'User ID is required' });
+            return res.status(401).json({ error: 'Authentication required' });
         }
 
         const updated = await notificationService.markAllNotificationsAsRead(parseInt(userId));

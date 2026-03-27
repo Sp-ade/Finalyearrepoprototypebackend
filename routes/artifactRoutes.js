@@ -8,6 +8,10 @@ const {
     deleteArtifact,
     updateArtifactVisibility
 } = require('../controllers/artifactController');
+const authenticate = require('../middleware/auth');
+
+// Apply authentication to all routes
+router.use(authenticate);
 
 // Upload artifact for a project
 router.post(
