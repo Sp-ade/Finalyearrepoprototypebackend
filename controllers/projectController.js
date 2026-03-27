@@ -6,9 +6,9 @@ const projectService = require('../services/projectService');
 const createProject = async (req, res) => {
     try {
         const projectData = { ...req.body };
-        
+
         // IDOR Fix: If supervisor is creating, force their ID from session
-        if (req.user.role === 'supervisor') {
+        if (req.user?.role === 'supervisor') {
             projectData.supervisorId = req.user.sub;
         }
 
@@ -77,7 +77,7 @@ const getProjectById = async (req, res) => {
     try {
         const { id } = req.params;
         // IDOR Fix: Use student ID from JWT sub instead of query params
-        const studentId = req.user.sub; 
+        const studentId = req.user?.sub;
 
         const result = await projectService.getProjectById(parseInt(id));
 
@@ -94,7 +94,7 @@ const getProjectById = async (req, res) => {
         let submissionId = null;
 
         // Automatically grant access to admins
-        if (req.user.role === 'admin') {
+        if (req.user?.role === 'admin') {
             hasAccess = true;
         }
 
@@ -137,7 +137,7 @@ const getProjectById = async (req, res) => {
             }
         }
 
-        const isSupervisor = project.supervisor_id === req.user.sub || String(project.supervisor_id) === String(req.user.sub);
+        const isSupervisor = req.user ? (project.supervisor_id === req.user.sub || String(project.supervisor_id) === String(req.user.sub)) : false;
         const responseData = {
             ...project,
             hasAccess,
@@ -164,21 +164,25 @@ const getProjectById = async (req, res) => {
 const updateProject = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         // IDOR Fix: Verify ownership/admin before update
         const projectRes = await projectService.getProjectById(parseInt(id));
         if (!projectRes.success) {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        if (req.user.role !== 'admin' && projectRes.project.supervisor_id !== req.user.sub) {
+        if (req.user?.role !== 'admin' && projectRes.project.supervisor_id !== req.user?.sub) {
             // Check if user is a student leader with an approved edit request
-            const studentId = req.user.sub;
+            const studentId = req.user?.sub;
+            if (!studentId) {
+                return res.status(401).json({ message: 'Authentication required' });
+            }
+
             const editRequestRes = await db.query(
                 "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'",
                 [id, studentId]
             );
-            
+
             if (editRequestRes.rows.length === 0) {
                 return res.status(403).json({ message: 'Unauthorized to update this project' });
             }
@@ -212,7 +216,7 @@ const deleteProject = async (req, res) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        if (req.user.role !== 'admin' && projectRes.project.supervisor_id !== req.user.sub) {
+        if (req.user?.role !== 'admin' && projectRes.project.supervisor_id !== req.user?.sub) {
             return res.status(403).json({ message: 'Unauthorized to delete this project' });
         }
 

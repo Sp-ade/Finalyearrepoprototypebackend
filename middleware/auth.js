@@ -25,4 +25,26 @@ const authenticate = (req, res, next) => {
     }
 };
 
-module.exports = authenticate;
+/**
+ * Optional authentication: decodes user if present, but continues if not.
+ */
+const optionalAuthenticate = (req, res, next) => {
+    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+    
+    if (token) {
+        try {
+            const decoded = jwt.verify(token);
+            req.user = decoded;
+        } catch (err) {
+            // Ignore invalid token for optional authentication
+            console.error('Optional JWT Verification Error:', err.message);
+        }
+    }
+    
+    next();
+};
+
+module.exports = {
+    authenticate,
+    optionalAuthenticate
+};

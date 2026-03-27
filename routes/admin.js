@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { verifyAdmin } = require('../middleware/adminAuth');
-const authenticate = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth')
 
 // Apply authentication and admin verification middleware to all routes
 router.use(authenticate);

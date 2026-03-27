@@ -24,10 +24,10 @@ exports.getSubmissionsByProject = async (req, res) => {
     try {
         const { projectId } = req.params;
         const submissions = await submissionService.getByProject(projectId);
-        res.json(submissions);
+        res.json({ success: true, requests: submissions });
     } catch (error) {
         console.error('Error fetching submissions:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+        res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Internal server error' });
     }
 };
 
@@ -37,10 +37,10 @@ exports.getAllSubmissions = async (req, res) => {
         // IDOR Fix: Use supervisor ID from JWT, ignore query params
         const supervisorId = req.user.sub;
         const submissions = await submissionService.getAll(supervisorId);
-        res.json(submissions);
+        res.json({ success: true, requests: submissions });
     } catch (error) {
         console.error('Error fetching all submissions:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+        res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Internal server error' });
     }
 };
 
@@ -69,10 +69,10 @@ exports.getStudentSubmission = async (req, res) => {
         // IDOR Fix: Use student ID from JWT, ignore params
         const studentId = req.user.sub;
         const result = await submissionService.getStudentSubmission(studentId);
-        res.json(result);
+        res.json({ success: true, ...result });
     } catch (error) {
         console.error('Error fetching student submission:', error);
-        res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+        res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Internal server error' });
     }
 };
 

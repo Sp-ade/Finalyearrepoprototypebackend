@@ -15,8 +15,7 @@ const streamNotifications = (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    // Ensure CORS headers if needed
-    res.setHeader('Access-Control-Allow-Origin', '*');
+
 
     // Send an initial ping to establish connection
     res.write('data: {"type": "ping"}\n\n');
@@ -44,7 +43,7 @@ const getUnreadNotifications = async (req, res) => {
     try {
         // IDOR Fix: Use user ID from JWT
         const userId = req.user.sub;
-        
+
         if (!userId) {
             return res.status(401).json({ error: 'Authentication required' });
         }

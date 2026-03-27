@@ -7,7 +7,7 @@ const {
     uploadMultipleFiles,
     deleteUploadedFile
 } = require('../controllers/uploadController');
-const authenticate = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 

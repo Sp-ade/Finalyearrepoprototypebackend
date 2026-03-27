@@ -8,28 +8,26 @@ const {
     deleteArtifact,
     updateArtifactVisibility
 } = require('../controllers/artifactController');
-const authenticate = require('../middleware/auth');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth');
 
-// Apply authentication to all routes
-router.use(authenticate);
-
-// Upload artifact for a project
+// Upload artifact for a project (Mandatory Auth)
 router.post(
     '/:projectId/artifacts',
+    authenticate,
     uploads.projectArtifact.single('artifact'),
     uploadProjectArtifact
 );
 
-// Get all artifacts for a project
-router.get('/:projectId/artifacts', getProjectArtifacts);
+// Get all artifacts for a project (Public/Optional)
+router.get('/:projectId/artifacts', optionalAuthenticate, getProjectArtifacts);
 
-// Get a specific artifact
-router.get('/:projectId/artifacts/:artifactId', getArtifact);
+// Get a specific artifact (Public/Optional)
+router.get('/:projectId/artifacts/:artifactId', optionalAuthenticate, getArtifact);
 
-// Delete an artifact
-router.delete('/:projectId/artifacts/:artifactId', deleteArtifact);
+// Delete an artifact (Mandatory Auth)
+router.delete('/:projectId/artifacts/:artifactId', authenticate, deleteArtifact);
 
-// Update artifact visibility
-router.patch('/:projectId/artifacts/:artifactId/visibility', updateArtifactVisibility);
+// Update artifact visibility (Mandatory Auth)
+router.patch('/:projectId/artifacts/:artifactId/visibility', authenticate, updateArtifactVisibility);
 
 module.exports = router;

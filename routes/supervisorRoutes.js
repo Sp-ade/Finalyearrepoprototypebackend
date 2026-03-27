@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const supervisorController = require('../controllers/supervisorController');
-const authenticate = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 

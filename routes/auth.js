@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const controller = require('../controllers/authcontroller')
 const signupController = require('../controllers/signupController')
-const authenticate = require('../middleware/auth')
+const { authenticate } = require('../middleware/auth')
 
 router.post('/signup', signupController.signup)
 router.post('/login', controller.login)
