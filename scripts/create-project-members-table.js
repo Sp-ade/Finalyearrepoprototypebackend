@@ -30,11 +30,11 @@ async function createProjectMembersTable() {
 
         for (const project of projects) {
             let studentIds = [];
-            
+
             if (project.student_ids) {
                 try {
-                    studentIds = typeof project.student_ids === 'string' 
-                        ? JSON.parse(project.student_ids) 
+                    studentIds = typeof project.student_ids === 'string'
+                        ? JSON.parse(project.student_ids)
                         : project.student_ids;
                 } catch (e) {
                     console.warn(`Could not parse student_ids for project ${project.project_id}: ${project.student_ids}`);
