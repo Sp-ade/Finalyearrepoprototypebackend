@@ -163,8 +163,10 @@ exports.signup = async ({ email, password, firstName, lastName, role, studentId,
     throw error
   }
 
-  // Send verification email
-  await sendVerificationEmail(email, verificationToken)
+  // Send verification email in background (don't await)
+  sendVerificationEmail(email, verificationToken).catch(err => {
+    console.error('❌ Background Verification Email Error:', err.message);
+  });
 
   return {
     id: user.id,
