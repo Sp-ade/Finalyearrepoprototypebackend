@@ -83,10 +83,10 @@ class SupervisorRepository {
             UPDATE Students 
             SET leader_assigned_by = $1 
             WHERE user_id = $2 
-            RETURNING *
         `;
-        const result = await db.query(query, [newSupervisorId, studentUserId]);
-        return result.rows[0];
+        await db.query(query, [newSupervisorId, studentUserId]);
+        // Return full student object with names
+        return await this.getStudentById(studentUserId);
     }
 }
 

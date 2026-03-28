@@ -362,10 +362,10 @@ class ProjectRepository {
             SET supervisor_id = $1,
                 last_updated = CURRENT_TIMESTAMP
             WHERE project_id = $2 
-            RETURNING *
         `;
-        const result = await db.query(query, [newSupervisorId, projectId]);
-        return result.rows[0];
+        await db.query(query, [newSupervisorId, projectId]);
+        // Return the full project with joined supervisor name, tags, etc.
+        return await this.getProjectById(projectId);
     }
 }
 
