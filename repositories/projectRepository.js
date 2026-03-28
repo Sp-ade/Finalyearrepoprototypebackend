@@ -52,12 +52,25 @@ class ProjectRepository {
                 for (let i = 0; i < studentIds.length; i++) {
                     const studentId = parseInt(studentIds[i]);
                     if (isNaN(studentId)) continue;
-                    const role = (i === 0) ? 'Leader' : 'Member';
+                    // Try to resolve the studentId (could be a Users.id OR a matric_no)
+                    let resolvedId = studentId;
+                    const idCheck = await client.query('SELECT id FROM Users WHERE id = $1', [studentId]);
                     
+                    if (idCheck.rows.length === 0) {
+                        // Not a direct ID, check if it's a matric number
+                        const matricCheck = await client.query('SELECT user_id FROM Students WHERE student_matric_no = $1', [studentIds[i]]);
+                        if (matricCheck.rows.length > 0) {
+                            resolvedId = matricCheck.rows[0].user_id;
+                        } else {
+                            console.warn(`⚠️ Student identifier ${studentIds[i]} could not be resolved to a user. Skipping.`);
+                            continue;
+                        }
+                    }
+
                     await client.query(`
                         INSERT INTO Project_Members (project_id, student_id, role)
                         VALUES ($1, $2, $3)
-                    `, [project.project_id, studentId, role]);
+                    `, [project.project_id, resolvedId, role]);
                 }
             }
 
@@ -258,10 +271,26 @@ class ProjectRepository {
                         const studentId = parseInt(studentIds[i]);
                         if (isNaN(studentId)) continue;
                         const role = (i === 0) ? 'Leader' : 'Member';
+                        
+                        // Try to resolve the studentId (could be a Users.id OR a matric_no)
+                        let resolvedId = studentId;
+                        const idCheck = await client.query('SELECT id FROM Users WHERE id = $1', [studentId]);
+                        
+                        if (idCheck.rows.length === 0) {
+                            // Not a direct ID, check if it's a matric number
+                            const matricCheck = await client.query('SELECT user_id FROM Students WHERE student_matric_no = $1', [studentIds[i]]);
+                            if (matricCheck.rows.length > 0) {
+                                resolvedId = matricCheck.rows[0].user_id;
+                            } else {
+                                console.warn(`⚠️ Student identifier ${studentIds[i]} could not be resolved to a user. Skipping.`);
+                                continue;
+                            }
+                        }
+
                         await client.query(`
                             INSERT INTO Project_Members (project_id, student_id, role)
                             VALUES ($1, $2, $3)
-                        `, [projectId, studentId, role]);
+                        `, [projectId, resolvedId, role]);
                     }
                 }
             }
