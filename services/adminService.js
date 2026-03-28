@@ -117,14 +117,33 @@ class AdminService {
      * Update user status (activate/deactivate)
      */
     async updateUserStatus(userId, isActive) {
-        const query = `
-            UPDATE Users
-            SET is_active = $1
-            WHERE id = $2
-            RETURNING id, email, first_name, last_name, role, is_active
-        `;
+        let query;
+        let values;
 
-        const result = await db.query(query, [isActive, userId]);
+        if (isActive === false) {
+            // Deactivating also unverifies to ensure a fresh start if re-activated
+            query = `
+                UPDATE Users
+                SET is_active = $1,
+                    is_verified = false,
+                    verification_token = NULL,
+                    verification_expires = NULL
+                WHERE id = $2
+                RETURNING id, email, first_name, last_name, role, is_active, is_verified
+            `;
+            values = [false, userId];
+        } else {
+            // Activating just sets is_active; verification remains unchanged
+            query = `
+                UPDATE Users
+                SET is_active = $1
+                WHERE id = $2
+                RETURNING id, email, first_name, last_name, role, is_active, is_verified
+            `;
+            values = [true, userId];
+        }
+
+        const result = await db.query(query, values);
 
         if (result.rows.length === 0) {
             return {
