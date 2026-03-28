@@ -11,12 +11,12 @@ class NotificationService extends EventEmitter {
     /**
      * Create a notification and immediately emit an event for SSE
      */
-    async createNotification(userId, title, message, type = 'general', client = null) {
+    async createNotification(userId, title, message, type = 'general', client = null, sourceId = null, sourceType = null) {
         try {
-            // Can be part of a transaction if clien is passed (e.g. from requestService)
+            // Can be part of a transaction if client is passed (e.g. from requestService)
             const dbClient = client || require('../Database');
             
-            const notification = await notificationRepository.create(userId, title, message, type, dbClient);
+            const notification = await notificationRepository.create(userId, title, message, type, dbClient, sourceId, sourceType);
             
             // Emit an event specific to this user so SSE can catch it
             this.emit(`notification:${userId}`, notification);

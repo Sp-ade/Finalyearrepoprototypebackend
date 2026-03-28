@@ -1,4 +1,5 @@
 const projectService = require('../services/projectService');
+const staffPermissionService = require('../services/staffPermissionService');
 
 /**
  * Create a new project
@@ -138,12 +139,25 @@ const getProjectById = async (req, res) => {
         }
 
         const isSupervisor = req.user ? (project.supervisor_id === req.user.sub || String(project.supervisor_id) === String(req.user.sub)) : false;
+
+        // Check if supervisor has an approved Staff_Permission to edit this project
+        let supervisorEditApproved = false;
+        if (isSupervisor) {
+            supervisorEditApproved = await staffPermissionService.hasApprovedPermission(req.user.sub, parseInt(id));
+        }
+
+        // Admin always has edit access
+        if (req.user?.role === 'admin') {
+            supervisorEditApproved = true;
+        }
+
         const responseData = {
             ...project,
             hasAccess,
             isSupervisor,
             isSubmitter,
             editRequestApproved,
+            supervisorEditApproved,
             submissionId
         };
 
@@ -171,20 +185,33 @@ const updateProject = async (req, res) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        if (req.user?.role !== 'admin' && projectRes.project.supervisor_id !== req.user?.sub) {
-            // Check if user is a student leader with an approved edit request
-            const studentId = req.user?.sub;
-            if (!studentId) {
-                return res.status(401).json({ message: 'Authentication required' });
-            }
+        const isOwner = projectRes.project.supervisor_id && req.user?.sub && String(projectRes.project.supervisor_id) === String(req.user.sub);
 
-            const editRequestRes = await db.query(
-                "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'",
-                [id, studentId]
-            );
+        if (req.user?.role !== 'admin') {
+            if (isOwner) {
+                // Supervisor owns the project — must also have an Approved Staff_Permission
+                const hasPermission = await staffPermissionService.hasApprovedPermission(req.user.sub, parseInt(id));
+                if (!hasPermission) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Edit permission required. Please request admin approval before editing this project.'
+                    });
+                }
+            } else {
+                // Not the owner — check if they are a student leader with an approved edit request
+                const studentId = req.user?.sub;
+                if (!studentId) {
+                    return res.status(401).json({ message: 'Authentication required' });
+                }
 
-            if (editRequestRes.rows.length === 0) {
-                return res.status(403).json({ message: 'Unauthorized to update this project' });
+                const editRequestRes = await db.query(
+                    "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'",
+                    [id, studentId]
+                );
+
+                if (editRequestRes.rows.length === 0) {
+                    return res.status(403).json({ message: 'Unauthorized to update this project' });
+                }
             }
         }
 
@@ -216,7 +243,9 @@ const deleteProject = async (req, res) => {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        if (req.user?.role !== 'admin' && projectRes.project.supervisor_id !== req.user?.sub) {
+        const isOwner = projectRes.project.supervisor_id && req.user?.sub && String(projectRes.project.supervisor_id) === String(req.user.sub);
+
+        if (req.user?.role !== 'admin' && !isOwner) {
             return res.status(403).json({ message: 'Unauthorized to delete this project' });
         }
 
@@ -236,11 +265,50 @@ const deleteProject = async (req, res) => {
     }
 };
 
+/**
+ * Reassign the supervisor for a project (Admin only)
+ */
+const reassignSupervisor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { newSupervisorId } = req.body;
+
+        if (!newSupervisorId) {
+            return res.status(400).json({ message: 'New supervisor ID is required' });
+        }
+
+        // Only admins can reassign supervisors
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({ message: 'Only administrators can reassign supervisors' });
+        }
+
+        const result = await projectService.reassignSupervisor(parseInt(id), parseInt(newSupervisorId));
+
+        if (!result.success) {
+            return res.status(404).json({ message: result.message });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Supervisor reassigned successfully',
+            project: result.project
+        });
+    } catch (error) {
+        console.error('Error reassigning supervisor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error reassigning supervisor',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     createProject,
     getAllProjects,
     getProjectById,
     updateProject,
     deleteProject,
-    getAllTags
+    getAllTags,
+    reassignSupervisor
 };

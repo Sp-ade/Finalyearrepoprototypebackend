@@ -49,6 +49,9 @@ app.use('/api/supervisors', supervisorRoutes)
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/api/notifications', notificationRoutes)
 
+const staffPermissionRoutes = require('./routes/staffPermissionRoutes');
+app.use('/api/staff-permissions', staffPermissionRoutes)
+
 console.log('Routes registered:')
 
 // Error handler must be last

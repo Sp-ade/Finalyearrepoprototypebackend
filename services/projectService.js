@@ -216,48 +216,34 @@ class ProjectService {
                 console.log(`[ProjectService] Found ${artifacts.length} artifacts to delete for project ${projectId}`);
             } catch (err) {
                 console.error(`[ProjectService] Error fetching artifacts for project ${projectId}:`, err);
-                // We proceed to try deleting the project even if fetching artifacts fails, 
-                // though this might leave orphaned files in Cloudinary.
-                // Ideally we should stop, but let's try to clear what we can.
             }
 
             if (artifacts && artifacts.length > 0) {
-                // Delete each artifact file from Cloudinary and DB
                 for (const artifact of artifacts) {
                     try {
-                        console.log(`[ProjectService] Processing artifact ${artifact.artifact_id}`);
-
-                        // Delete from Cloudinary first
                         if (artifact.file_path) {
-                            // Extract public ID from Cloudinary URL
                             const urlParts = artifact.file_path.split('/');
                             const uploadIndex = urlParts.indexOf('upload');
 
                             if (uploadIndex !== -1 && uploadIndex < urlParts.length - 1) {
                                 let publicIdParts = urlParts.slice(uploadIndex + 1);
-
-                                // Remove version if present
                                 if (publicIdParts.length > 0 && publicIdParts[0].startsWith('v') && !isNaN(parseInt(publicIdParts[0].substring(1)))) {
                                     publicIdParts = publicIdParts.slice(1);
                                 }
-
                                 const publicIdWithExt = publicIdParts.join('/');
                                 const lastDotIndex = publicIdWithExt.lastIndexOf('.');
                                 const publicId = lastDotIndex !== -1 ? publicIdWithExt.substring(0, lastDotIndex) : publicIdWithExt;
 
                                 if (publicId) {
-                                    console.log(`[ProjectService] Deleting Cloudinary file: ${publicId}`);
                                     await deleteFile(publicId);
                                 }
                             }
                         }
                     } catch (err) {
                         console.error(`[ProjectService] Failed to delete artifact ${artifact.artifact_id} from Cloudinary:`, err);
-                        // Continue deletion of other artifacts/project even if one file fails
                     }
 
                     try {
-                        // Delete from database
                         await artifactRepository.deleteArtifact(projectId, artifact.artifact_id);
                     } catch (dbErr) {
                         console.error(`[ProjectService] Failed to delete artifact ${artifact.artifact_id} from DB:`, dbErr);
@@ -265,24 +251,34 @@ class ProjectService {
                 }
             }
 
-            console.log(`[ProjectService] Deleting project record for ID: ${projectId}`);
             const deletedProject = await projectRepository.deleteProject(projectId);
 
             if (!deletedProject) {
-                console.warn(`[ProjectService] Project ID ${projectId} not found in database for deletion`);
-                return {
-                    success: false,
-                    message: 'Project not found'
-                };
+                return { success: false, message: 'Project not found' };
             }
 
-            console.log(`[ProjectService] Project ID ${projectId} deleted successfully`);
-            return {
-                success: true,
-                message: 'Project deleted successfully'
-            };
+            return { success: true, message: 'Project deleted successfully' };
         } catch (error) {
             console.error('[ProjectService] Critical error deleting project:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Reassign the supervisor for a project
+     */
+    async reassignSupervisor(projectId, newSupervisorId) {
+        try {
+            const updatedProject = await projectRepository.reassignProjectSupervisor(projectId, newSupervisorId);
+            if (!updatedProject) {
+                return { success: false, message: 'Project not found' };
+            }
+            return {
+                success: true,
+                project: this.formatProjectForResponse(updatedProject)
+            };
+        } catch (error) {
+            console.error('Error reassigning supervisor:', error);
             throw error;
         }
     }
@@ -291,27 +287,41 @@ class ProjectService {
      * Format project data for API response to match the old JSON format
      */
     formatProjectForResponse(project) {
-        // Parse student_names if it's a JSON string
+        // Preference the new normalized "members" array if available
         let studentNames = [];
-        if (project.student_names) {
-            try {
-                studentNames = typeof project.student_names === 'string'
-                    ? JSON.parse(project.student_names)
-                    : project.student_names;
-            } catch (e) {
-                studentNames = [];
-            }
-        }
-
-        // Parse student_ids if it's a JSON string
         let studentIds = [];
-        if (project.student_ids) {
-            try {
-                studentIds = typeof project.student_ids === 'string'
-                    ? JSON.parse(project.student_ids)
-                    : project.student_ids;
-            } catch (e) {
-                studentIds = [];
+        
+        if (project.members && Array.isArray(project.members) && project.members.length > 0) {
+            // Sort by role (Leader first) to maintain existing logic where first index is leader
+            const sortedMembers = [...project.members].sort((a, b) => {
+                if (a.role === 'Leader') return -1;
+                if (b.role === 'Leader') return 1;
+                return 0;
+            });
+            
+            studentNames = sortedMembers.map(m => m.name);
+            studentIds = sortedMembers.map(m => m.student_id);
+        } else {
+            // Fallback to old JSON parsing for backward compatibility 
+            // (useful if some projects weren't migrated or during transitional database states)
+            if (project.student_names) {
+                try {
+                    studentNames = typeof project.student_names === 'string'
+                        ? JSON.parse(project.student_names)
+                        : project.student_names;
+                } catch (e) {
+                    studentNames = [];
+                }
+            }
+
+            if (project.student_ids) {
+                try {
+                    studentIds = typeof project.student_ids === 'string'
+                        ? JSON.parse(project.student_ids)
+                        : project.student_ids;
+                } catch (e) {
+                    studentIds = [];
+                }
             }
         }
 

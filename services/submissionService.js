@@ -24,7 +24,10 @@ class SubmissionService {
                     project.supervisor_id, 
                     'New Project Submission', 
                     `A student has submitted their final year project "${project.title}" for review.`, 
-                    'new_submission'
+                    'new_submission',
+                    null,
+                    submission.submission_id,
+                    'submission'
                 ).catch(err => console.error('Error emitting submission notification:', err));
             }
         } catch (err) {
@@ -95,7 +98,10 @@ class SubmissionService {
                     submission.student_id,
                     title,
                     message,
-                    'submission_status_change'
+                    'submission_status_change',
+                    null,
+                    submission.submission_id,
+                    'submission'
                 ).catch(err => console.error('Error emitting submission notification:', err));
             } catch (err) {
                 console.error('Notification service integration error:', err);
@@ -174,7 +180,10 @@ class SubmissionService {
                         project.supervisor_id, 
                         'Project Resubmitted', 
                         `A student has resubmitted their project "${project.title}" for review after making changes.`, 
-                        'resubmission'
+                        'resubmission',
+                        null,
+                        submission.submission_id,
+                        'submission'
                     ).catch(err => console.error('Error emitting resubmission notification:', err));
                 }
             } catch (err) {

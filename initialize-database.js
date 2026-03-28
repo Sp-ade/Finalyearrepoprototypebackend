@@ -29,6 +29,11 @@ async function initializeDatabase() {
         await createSubmissionTable();
         console.log('✓ Submission tables created\n');
 
+        // Step 5: Create Staff_Permissions (must come after Projects table in Step 2)
+        console.log('Step 5: Creating staff permission tables...');
+        await db.ensureStaffPermissionsTable();
+        console.log('✓ Staff permission tables ready\n');
+
         console.log('✅ Database initialization complete!');
         console.log('All tables have been created successfully.');
 

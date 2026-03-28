@@ -6,7 +6,6 @@ class ProjectRepository {
      */
     async createProject(projectData) {
         const {
-            name,
             title,
             description,
             department,
@@ -17,34 +16,59 @@ class ProjectRepository {
             supervisorRemark = null,
             studentNames,
             studentIds,
-            category,
-            attachmentUrl = null,
-            attachmentMetadata = null
         } = projectData;
 
-        const query = `
-            INSERT INTO Projects 
-            (title, description, department, academic_year, grade, status, 
-             supervisor_id, supervisor_remark, student_names, student_ids)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING *
-        `;
+        // Start a transaction
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        const values = [
-            title,
-            description,
-            department || 'Not Specified',
-            academicYear,
-            grade,
-            status,
-            supervisorId,
-            supervisorRemark,
-            JSON.stringify(studentNames || []),
-            JSON.stringify(studentIds || [])
-        ];
+            const query = `
+                INSERT INTO Projects 
+                (title, description, department, academic_year, grade, status, 
+                 supervisor_id, supervisor_remark, student_names, student_ids)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                RETURNING *
+            `;
 
-        const result = await db.query(query, values);
-        return result.rows[0];
+            const values = [
+                title || null,
+                description || '',
+                department || 'Not Specified',
+                academicYear || null,
+                grade || 'Pending',
+                status || 'Active',
+                supervisorId || null,
+                supervisorRemark || 'Evaluation pending',
+                JSON.stringify(studentNames || []),
+                JSON.stringify(studentIds || [])
+            ];
+
+            const result = await client.query(query, values);
+            const project = result.rows[0];
+
+            // Insert into Project_Members
+            if (Array.isArray(studentIds) && studentIds.length > 0) {
+                for (let i = 0; i < studentIds.length; i++) {
+                    const studentId = parseInt(studentIds[i]);
+                    if (isNaN(studentId)) continue;
+                    const role = (i === 0) ? 'Leader' : 'Member';
+                    
+                    await client.query(`
+                        INSERT INTO Project_Members (project_id, student_id, role)
+                        VALUES ($1, $2, $3)
+                    `, [project.project_id, studentId, role]);
+                }
+            }
+
+            await client.query('COMMIT');
+            return project;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 
     /**
@@ -76,13 +100,27 @@ class ProjectRepository {
                         )
                     ) FILTER (WHERE pa.artifact_id IS NOT NULL),
                     '[]'
-                ) as artifacts
+                ) as artifacts,
+                COALESCE(
+                    json_agg(
+                        DISTINCT jsonb_build_object(
+                            'student_id', pm.student_id,
+                            'role', pm.role,
+                            'name', studentsu.first_name || ' ' || studentsu.last_name,
+                            'matric_no', s.student_matric_no
+                        )
+                    ) FILTER (WHERE pm.student_id IS NOT NULL),
+                    '[]'
+                ) as members
             FROM Projects p
 
             LEFT JOIN Users u ON p.supervisor_id = u.id
             LEFT JOIN Project_Tags pt ON p.project_id = pt.project_id
             LEFT JOIN Tags t ON pt.tag_id = t.tag_id
             LEFT JOIN Project_Artifacts pa ON p.project_id = pa.project_id
+            LEFT JOIN Project_Members pm ON p.project_id = pm.project_id
+            LEFT JOIN Users studentsu ON pm.student_id = studentsu.id
+            LEFT JOIN Students s ON pm.student_id = s.user_id
             -- Filter projects: Must be Active AND (no submission OR approved submission)
             WHERE p.status = 'Active' 
             AND (
@@ -127,13 +165,27 @@ class ProjectRepository {
                         )
                     ) FILTER (WHERE pa.artifact_id IS NOT NULL),
                     '[]'
-                ) as artifacts
+                ) as artifacts,
+                COALESCE(
+                    json_agg(
+                        DISTINCT jsonb_build_object(
+                            'student_id', pm.student_id,
+                            'role', pm.role,
+                            'name', studentsu.first_name || ' ' || studentsu.last_name,
+                            'matric_no', s.student_matric_no
+                        )
+                    ) FILTER (WHERE pm.student_id IS NOT NULL),
+                    '[]'
+                ) as members
             FROM Projects p
 
             LEFT JOIN Users u ON p.supervisor_id = u.id
             LEFT JOIN Project_Tags pt ON p.project_id = pt.project_id
             LEFT JOIN Tags t ON pt.tag_id = t.tag_id
             LEFT JOIN Project_Artifacts pa ON p.project_id = pa.project_id
+            LEFT JOIN Project_Members pm ON p.project_id = pm.project_id
+            LEFT JOIN Users studentsu ON pm.student_id = studentsu.id
+            LEFT JOIN Students s ON pm.student_id = s.user_id
             WHERE p.project_id = $1
             GROUP BY p.project_id, u.first_name, u.last_name
         `;
@@ -158,38 +210,70 @@ class ProjectRepository {
             studentIds
         } = projectData;
 
-        const query = `
-            UPDATE Projects
-            SET 
-                title = COALESCE($1, title),
-                description = COALESCE($2, description),
-                department = COALESCE($3, department),
-                academic_year = COALESCE($4, academic_year),
-                grade = COALESCE($5, grade),
-                status = COALESCE($6, status),
-                supervisor_remark = COALESCE($7, supervisor_remark),
-                student_names = COALESCE($8, student_names),
-                student_ids = COALESCE($9, student_ids),
-                last_updated = CURRENT_TIMESTAMP
-            WHERE project_id = $10
-            RETURNING *
-        `;
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        const values = [
-            title,
-            description,
-            department,
-            academicYear,
-            grade,
-            status,
-            supervisorRemark,
-            studentNames ? JSON.stringify(studentNames) : null,
-            studentIds ? JSON.stringify(studentIds) : null,
-            projectId
-        ];
+            const query = `
+                UPDATE Projects
+                SET 
+                    title = COALESCE($1, title),
+                    description = COALESCE($2, description),
+                    department = COALESCE($3, department),
+                    academic_year = COALESCE($4, academic_year),
+                    grade = COALESCE($5, grade),
+                    status = COALESCE($6, status),
+                    supervisor_remark = COALESCE($7, supervisor_remark),
+                    student_names = COALESCE($8, student_names),
+                    student_ids = COALESCE($9, student_ids),
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE project_id = $10
+                RETURNING *
+            `;
 
-        const result = await db.query(query, values);
-        return result.rows[0];
+            const values = [
+                title || null,
+                description || null,
+                department || null,
+                academicYear || null,
+                grade || null,
+                status || null,
+                supervisorRemark || null,
+                studentNames ? JSON.stringify(studentNames) : null,
+                studentIds ? JSON.stringify(studentIds) : null,
+                projectId
+            ];
+
+            const result = await client.query(query, values);
+            const project = result.rows[0];
+
+            // Only sync members if studentIds was actually passed in the update
+            if (studentIds !== undefined) {
+                // Delete existing members
+                await client.query('DELETE FROM Project_Members WHERE project_id = $1', [projectId]);
+                
+                // Add new members
+                if (Array.isArray(studentIds)) {
+                    for (let i = 0; i < studentIds.length; i++) {
+                        const studentId = parseInt(studentIds[i]);
+                        if (isNaN(studentId)) continue;
+                        const role = (i === 0) ? 'Leader' : 'Member';
+                        await client.query(`
+                            INSERT INTO Project_Members (project_id, student_id, role)
+                            VALUES ($1, $2, $3)
+                        `, [projectId, studentId, role]);
+                    }
+                }
+            }
+
+            await client.query('COMMIT');
+            return project;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 
     /**

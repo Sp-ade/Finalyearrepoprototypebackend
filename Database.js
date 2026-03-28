@@ -82,8 +82,20 @@ module.exports = {
         message TEXT NOT NULL,
         is_read BOOLEAN DEFAULT FALSE,
         type VARCHAR(50),
+        source_id INTEGER,
+        source_type VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `)
+
+    // Ensure columns exist if table was previously created
+    await pool.query(`
+      ALTER TABLE Notifications
+      ADD COLUMN IF NOT EXISTS source_id INTEGER;
+    `)
+    await pool.query(`
+      ALTER TABLE Notifications
+      ADD COLUMN IF NOT EXISTS source_type VARCHAR(50);
     `)
   },
   async createUser(
@@ -192,6 +204,59 @@ module.exports = {
       `);
     } catch (err) {
       console.warn('Note: leader_assigned_by column update check finished.');
+    }
+  },
+  async ensureStaffPermissionsTable() {
+    // Must run AFTER Projects table is created (Step 2 in initialize-database.js)
+    try {
+      // Check if project_id exists. If not, the table is likely from a partial run and needs fixing.
+      const checkRes = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'staff_permissions' AND column_name = 'project_id'
+      `);
+
+      if (checkRes.rows.length === 0) {
+        console.log('⚠️ Staff_Permissions table is missing project_id. Resetting table...');
+        await pool.query('DROP TABLE IF EXISTS Staff_Permissions');
+      }
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS Staff_Permissions (
+          permission_id  SERIAL PRIMARY KEY,
+          supervisor_id  INTEGER NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+          project_id     INTEGER NOT NULL REFERENCES Projects(project_id) ON DELETE CASCADE,
+          type           VARCHAR(20) NOT NULL DEFAULT 'edit' CHECK (type IN ('edit', 'delete')),
+          reason         TEXT,
+          status         VARCHAR(20) NOT NULL DEFAULT 'Pending'
+                         CHECK (status IN ('Pending', 'Approved', 'Rejected')),
+          requested_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          reviewed_at    TIMESTAMP,
+          UNIQUE (supervisor_id, project_id, type)
+        );
+      `);
+      
+      // Migration: ensuring columns and constraint if table already exists
+      await pool.query(`
+        ALTER TABLE Staff_Permissions
+        ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'edit' CHECK (type IN ('edit', 'delete'));
+      `);
+
+      // Drop old unique constraint if it exists (the one without 'type')
+      await pool.query(`
+        ALTER TABLE Staff_Permissions 
+        DROP CONSTRAINT IF EXISTS staff_permissions_supervisor_id_project_id_key;
+      `);
+
+      // Add new unique constraint
+      await pool.query(`
+        ALTER TABLE Staff_Permissions 
+        ADD CONSTRAINT staff_permissions_supervisor_id_project_id_type_key UNIQUE(supervisor_id, project_id, type);
+      `);
+
+      console.log('✓ Staff_Permissions table ready');
+    } catch (err) {
+      console.error('❌ Error initializing Staff_Permissions table:', err.message);
     }
   }
 }

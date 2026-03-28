@@ -21,6 +21,7 @@ router.put('/:id', authenticate, projectController.updateProject);
 
 // DELETE project (Mandatory Auth)
 router.delete('/:id', authenticate, projectController.deleteProject);
+router.patch('/:id/reassign-supervisor', authenticate, projectController.reassignSupervisor);
 
 module.exports = router;
 

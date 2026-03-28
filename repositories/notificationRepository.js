@@ -2,15 +2,15 @@ const db = require('../Database');
 
 class NotificationRepository {
     /**
-     * Create a new notification
+     * Create a new notification with optional source context
      */
-    async create(userId, title, message, type = 'general', client = db) {
+    async create(userId, title, message, type = 'general', client = db, sourceId = null, sourceType = null) {
         const query = `
-            INSERT INTO Notifications (user_id, title, message, type)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO Notifications (user_id, title, message, type, source_id, source_type)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
-        const result = await client.query(query, [userId, title, message, type]);
+        const result = await client.query(query, [userId, title, message, type, sourceId, sourceType]);
         return result.rows[0];
     }
 
