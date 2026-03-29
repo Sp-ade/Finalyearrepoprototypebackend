@@ -52,6 +52,7 @@ class ProjectRepository {
                 for (let i = 0; i < studentIds.length; i++) {
                     const studentId = parseInt(studentIds[i]);
                     if (isNaN(studentId)) continue;
+                    const role = (i === 0) ? 'Leader' : 'Member';
                     // Try to resolve the studentId (could be a Users.id OR a matric_no)
                     let resolvedId = studentId;
                     const idCheck = await client.query('SELECT id FROM Users WHERE id = $1', [studentId]);
