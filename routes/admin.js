@@ -22,6 +22,10 @@ router.get('/requests/stats', adminController.getRequestStats);
 
 // Analytics Routes
 router.get('/analytics/dashboard', adminController.getDashboardAnalytics);
+router.get('/logs', adminController.getAllActivityLogs);
+router.get('/logs/actions', adminController.getLogActionTypes);
+router.get('/submissions/pending', adminController.getPendingSubmissions);
+router.get('/requests/pending', adminController.getAllRequests); // Reusing existing getAllRequests controller
 
 // Tag Management Routes
 router.get('/tags', adminController.getAllTags);

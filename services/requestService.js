@@ -1,4 +1,5 @@
 const requestRepository = require('../repositories/requestRepository');
+const activityService = require('../services/activityService');
 
 class RequestService {
     /**
@@ -11,6 +12,9 @@ class RequestService {
             throw error;
         }
         const request = await requestRepository.createRequest(studentId, projectId, reason, mode);
+
+        // Audit Logging
+        await activityService.log(projectId, studentId, 'ACCESS_REQUESTED', `Student requested ${mode} access`);
 
         // Notify supervisor
         try {
@@ -57,7 +61,24 @@ class RequestService {
     /**
      * Update a request's status
      */
-    async updateRequest(requestId, status, response) {
+    async updateRequest(requestId, status, response, approverId, approverRole) {
+        // Authorization Check: Admin or assigned Supervisor only
+        const request = await requestRepository.getRequestById(requestId);
+        if (!request) {
+            const error = new Error('Request not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const projectRepository = require('../repositories/projectRepository');
+        const project = await projectRepository.getProjectById(request.project_id);
+        
+        if (approverRole !== 'admin' && project.supervisor_id !== approverId) {
+            const error = new Error('Unauthorized: Only the assigned supervisor or an admin can review this request.');
+            error.statusCode = 403;
+            throw error;
+        }
+
         const updated = await requestRepository.updateRequestStatus(requestId, status, response);
         if (!updated) {
             const error = new Error('Request not found');
@@ -89,6 +110,12 @@ class RequestService {
             console.error('Notification service integration error:', err);
         }
 
+        // Audit Logging
+        if (approverId && updated.project_id) {
+            const actor = approverRole === 'admin' ? 'Admin' : 'Supervisor';
+            await activityService.log(updated.project_id, approverId, 'ACCESS_REVIEWED', `${actor} ${status.toLowerCase()} student ${updated.mode} access`);
+        }
+
         return updated;
     }
 
@@ -103,6 +130,15 @@ class RequestService {
             throw error;
         }
         return deleted;
+    }
+
+    /**
+     * Delete / Reset a request for a student and project.
+     * Used to clear the approved status after a successful edit.
+     */
+    async resetRequest(studentId, projectId, mode = 'edit') {
+        await requestRepository.deleteByProjectAndStudent(studentId, projectId, mode);
+        return { success: true };
     }
 }
 

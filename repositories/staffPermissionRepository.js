@@ -87,6 +87,17 @@ class StaffPermissionRepository {
         const result = await db.query(query, [status, permissionId]);
         return result.rows[0];
     }
+
+    /**
+     * Delete a permission for a supervisor + project + type.
+     */
+    async deleteByProjectAndSupervisor(supervisorId, projectId, type = 'edit') {
+        const query = `
+            DELETE FROM Staff_Permissions
+            WHERE supervisor_id = $1 AND project_id = $2 AND type = $3
+        `;
+        await db.query(query, [supervisorId, projectId, type]);
+    }
 }
 
 module.exports = new StaffPermissionRepository();

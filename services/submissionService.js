@@ -54,10 +54,26 @@ class SubmissionService {
     /**
      * Review a submission — approve or request changes (uses a DB transaction)
      */
-    async reviewSubmission(submissionId, { status, supervisor_response, grade }) {
+    async reviewSubmission(submissionId, { status, supervisor_response, grade, approverId, approverRole }) {
         if (!['Approved', 'Changes Requested'].includes(status)) {
             const error = new Error('Invalid status. Must be "Approved" or "Changes Requested".');
             error.statusCode = 400;
+            throw error;
+        }
+
+        // Authorization Check: Admin or assigned Supervisor only
+        const projectRepository = require('../repositories/projectRepository');
+        const submissionData = await submissionRepository.getById(submissionId);
+        if (!submissionData) {
+            const error = new Error('Submission not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const project = await projectRepository.getProjectById(submissionData.project_id);
+        if (approverRole !== 'admin' && project.supervisor_id !== approverId) {
+            const error = new Error('Unauthorized: Only the assigned supervisor or an admin can review this submission.');
+            error.statusCode = 403;
             throw error;
         }
 

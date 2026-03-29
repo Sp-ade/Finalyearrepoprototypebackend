@@ -53,7 +53,9 @@ exports.reviewSubmission = async (req, res) => {
         const submission = await submissionService.reviewSubmission(submissionId, {
             status,
             supervisor_response,
-            grade
+            grade,
+            approverId: req.user.sub,
+            approverRole: req.user.role
         });
 
         res.json({ message: 'Submission reviewed successfully', submission });

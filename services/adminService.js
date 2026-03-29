@@ -1,5 +1,6 @@
 const db = require('../Database');
 const supervisorRepository = require('../repositories/supervisorRepository');
+const activityRepository = require('../repositories/activityRepository');
 
 class AdminService {
     /**
@@ -262,18 +263,8 @@ class AdminService {
             this.getRequestStats()
         ]);
 
-        // Get recent activity (last 10 actions)
-        const activityQuery = `
-            (SELECT 'user_registered' as action, email as details, created_at FROM Users ORDER BY created_at DESC LIMIT 5)
-            UNION ALL
-            (SELECT 'project_created' as action, title as details, created_at FROM Projects ORDER BY created_at DESC LIMIT 5)
-            UNION ALL
-            (SELECT 'request_submitted' as action, CAST(request_id AS TEXT) as details, requested_at as created_at FROM Access_Requests_Student ORDER BY requested_at DESC LIMIT 5)
-            ORDER BY created_at DESC
-            LIMIT 10
-        `;
-
-        const activityResult = await db.query(activityQuery);
+        // Get recent activity (last 10 actions) from activity_logs table
+        const activityResult = await activityRepository.getGlobalRecentActivity(10);
 
         return {
             success: true,
@@ -281,8 +272,34 @@ class AdminService {
                 users: userStats.stats,
                 projects: projectStats.stats,
                 requests: requestStats.stats,
-                recent_activity: activityResult.rows
+                recent_activity: activityResult
             }
+        };
+    }
+
+    /**
+     * Get all activity logs with pagination and filters
+     */
+    async getAllActivityLogs(filters = {}) {
+        const { limit = 50, offset = 0, search, actionType, role } = filters;
+        const result = await activityRepository.getPaginatedLogs(limit, offset, { search, actionType, role });
+        
+        return {
+            success: true,
+            ...result,
+            limit,
+            offset
+        };
+    }
+
+    /**
+     * Get distinct action types for frontend filters
+     */
+    async getLogActionTypes() {
+        const types = await activityRepository.getDistinctActionTypes();
+        return {
+            success: true,
+            actions: types
         };
     }
 
@@ -412,8 +429,6 @@ class AdminService {
      */
     async reassignProjectSupervisor(projectId, newSupervisorId) {
         // 1. Validate the project exists 
-        // We use an inline DB query or can use projectRepository if imported
-        // Wait, I need to fetch the project. Let's do it directly through projectRepository
         const projectRepository = require('../repositories/projectRepository');
         const project = await projectRepository.getProjectById(projectId);
 
@@ -448,6 +463,18 @@ class AdminService {
             success: true,
             message: 'Project successfully reassigned to new supervisor',
             project: updated
+        };
+    }
+
+    /**
+     * Get all pending project submissions across the system
+     */
+    async getPendingSubmissions() {
+        const submissionRepository = require('../repositories/submissionRepository');
+        const submissions = await submissionRepository.getAll(null); // Get all submissions
+        return {
+            success: true,
+            submissions: submissions.filter(s => s.status === 'Pending')
         };
     }
 }

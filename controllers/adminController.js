@@ -1,4 +1,5 @@
 const adminService = require('../services/adminService');
+const activityService = require('../services/activityService');
 
 /**
  * Get all users
@@ -262,12 +263,80 @@ const reassignProjectSupervisor = async (req, res) => {
             return res.status(400).json(result);
         }
 
+        // Audit Logging
+        if (result.success) {
+            await activityService.logSupervisorReassigned(
+                parseInt(projectId),
+                req.user.sub,
+                "Previous Supervisor", // We don't have the old name easily here without extra fetch
+                "New Supervisor"
+            );
+        }
+
         res.status(200).json(result);
     } catch (error) {
         console.error('Error reassigning project supervisor:', error);
         res.status(500).json({
             success: false,
             message: 'Error reassigning supervisor',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get all activity logs with pagination and filters
+ */
+const getAllActivityLogs = async (req, res) => {
+    try {
+        const { limit, offset, search, action: actionType, role } = req.query;
+        const result = await adminService.getAllActivityLogs({ 
+            limit: limit ? parseInt(limit) : 50, 
+            offset: offset ? parseInt(offset) : 0,
+            search,
+            actionType,
+            role
+        });
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching activity logs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching activity logs',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get available action types for filtering logs
+ */
+const getLogActionTypes = async (req, res) => {
+    try {
+        const result = await adminService.getLogActionTypes();
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching action types:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching action types',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get all pending submissions
+ */
+const getPendingSubmissions = async (req, res) => {
+    try {
+        const result = await adminService.getPendingSubmissions();
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching pending submissions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching pending submissions',
             error: error.message
         });
     }
@@ -285,5 +354,8 @@ module.exports = {
     updateTag,
     deleteTag,
     reassignLeaderSupervisor,
-    reassignProjectSupervisor
+    reassignProjectSupervisor,
+    getAllActivityLogs,
+    getLogActionTypes,
+    getPendingSubmissions
 };

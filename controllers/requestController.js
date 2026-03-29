@@ -54,7 +54,9 @@ const updateRequest = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, response } = req.body;
-        const request = await requestService.updateRequest(id, status, response);
+        const approverId = req.user.sub;
+        const approverRole = req.user.role;
+        const request = await requestService.updateRequest(id, status, response, approverId, approverRole);
         res.status(200).json({ success: true, message: 'Request updated', request });
     } catch (error) {
         console.error('Error updating request:', error);

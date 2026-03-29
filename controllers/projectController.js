@@ -1,5 +1,7 @@
 const projectService = require('../services/projectService');
 const staffPermissionService = require('../services/staffPermissionService');
+const requestService = require('../services/requestService');
+const activityService = require('../services/activityService');
 
 /**
  * Create a new project
@@ -14,6 +16,10 @@ const createProject = async (req, res) => {
         }
 
         const result = await projectService.createProject(projectData);
+
+        if (result.project) {
+            await activityService.logProjectCreated(result.project.project_id, req.user.sub, result.project.title);
+        }
 
         res.status(201).json({
             project: result.project
@@ -92,6 +98,7 @@ const getProjectById = async (req, res) => {
         let hasAccess = false;
         let isSubmitter = false;
         let editRequestApproved = false;
+        let hasRejectedRequest = false;
         let submissionId = null;
 
         // Automatically grant access to admins
@@ -136,6 +143,9 @@ const getProjectById = async (req, res) => {
             if (!hasAccess) {
                 hasAccess = await requestRepository.checkAccess(studentId, parseInt(id));
             }
+
+            // 4. Check for rejected requests
+            hasRejectedRequest = await requestRepository.haveRejectedRequest(studentId, parseInt(id));
         }
 
         const isSupervisor = req.user ? (project.supervisor_id === req.user.sub || String(project.supervisor_id) === String(req.user.sub)) : false;
@@ -157,6 +167,7 @@ const getProjectById = async (req, res) => {
             isSupervisor,
             isSubmitter,
             editRequestApproved,
+            hasRejectedRequest,
             supervisorEditApproved,
             submissionId
         };
@@ -216,6 +227,21 @@ const updateProject = async (req, res) => {
         }
 
         const result = await projectService.updateProject(parseInt(id), req.body);
+
+        // Security: Reset staff permission after successful update for supervisors
+        if (req.user?.role === 'supervisor') {
+            await staffPermissionService.resetPermission(req.user.sub, parseInt(id), 'edit');
+        }
+
+        // Security: Reset student permission after successful update for student leaders
+        if (req.user?.role === 'student' && result.project) {
+            await requestService.resetRequest(req.user.sub, parseInt(id), 'edit');
+        }
+
+        // Audit Logging
+        if (result.project) {
+            await activityService.logProjectUpdated(parseInt(id), req.user.sub);
+        }
 
         res.status(200).json({
             project: result.project
@@ -288,6 +314,11 @@ const reassignSupervisor = async (req, res) => {
             return res.status(404).json({ message: result.message });
         }
 
+        // Audit Logging
+        if (result.project) {
+            await activityService.logSupervisorReassigned(parseInt(id), req.user.sub, "Previous Supervisor", result.project.supervisor_name);
+        }
+
         res.status(200).json({
             success: true,
             message: 'Supervisor reassigned successfully',
@@ -303,6 +334,36 @@ const reassignSupervisor = async (req, res) => {
     }
 };
 
+/**
+ * Get activity history for a project (Admin Only)
+ */
+const getProjectHistory = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Security: Only admins can view the history tab
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can view project activity history'
+            });
+        }
+
+        const history = await activityService.getProjectHistory(parseInt(id));
+        res.status(200).json({
+            success: true,
+            history
+        });
+    } catch (error) {
+        console.error('Error fetching project history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching project history',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     createProject,
     getAllProjects,
@@ -310,5 +371,6 @@ module.exports = {
     updateProject,
     deleteProject,
     getAllTags,
-    reassignSupervisor
+    reassignSupervisor,
+    getProjectHistory
 };

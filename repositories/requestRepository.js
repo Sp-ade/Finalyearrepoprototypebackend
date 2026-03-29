@@ -125,6 +125,29 @@ class RequestRepository {
         if (result.rows.length === 0) return false;
         return result.rows[0].status === 'Approved';
     }
+
+    /**
+     * Check if a student has a REJECTED request for a project
+     */
+    async haveRejectedRequest(studentId, projectId) {
+        const query = `
+            SELECT 1 FROM Access_Requests_Student
+            WHERE student_id = $1 AND project_id = $2 AND status = 'Rejected'
+        `;
+        const result = await db.query(query, [studentId, projectId]);
+        return result.rows.length > 0;
+    }
+
+    /**
+     * Delete a request for a specific student, project and mode
+     */
+    async deleteByProjectAndStudent(studentId, projectId, mode = 'edit') {
+        const query = `
+            DELETE FROM Access_Requests_Student
+            WHERE student_id = $1 AND project_id = $2 AND mode = $3
+        `;
+        await db.query(query, [studentId, projectId, mode]);
+    }
 }
 
 module.exports = new RequestRepository();

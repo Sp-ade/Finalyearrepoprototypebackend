@@ -88,10 +88,11 @@ const reviewPermission = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
+        const adminId = req.user.sub;
 
         if (!status) return res.status(400).json({ success: false, message: 'status is required' });
 
-        const result = await staffPermissionService.review(parseInt(id), status);
+        const result = await staffPermissionService.review(parseInt(id), status, adminId);
         if (!result.success) return res.status(400).json(result);
 
         res.status(200).json(result);
