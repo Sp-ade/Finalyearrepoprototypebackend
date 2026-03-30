@@ -12,12 +12,27 @@ class SupervisorService {
      * Set a student's role to leader
      */
     async setStudentLeader(userId, supervisorId) {
-        // Verify the user is actually a student
-        const user = await supervisorRepository.getUserRole(userId);
+        // Verify the user is actually a student and get full details
+        const student = await supervisorRepository.getStudentById(userId);
         
-        if (!user || user.role !== 'student') {
+        if (!student) {
             const error = new Error('Student not found.');
             error.statusCode = 404;
+            throw error;
+        }
+
+        // 1. Check if already assigned by someone else
+        if (student.leader_assigned_by && student.leader_assigned_by !== parseInt(supervisorId)) {
+            const error = new Error(`This student is already assigned as a leader by ${student.supervisor_first_name} ${student.supervisor_last_name}.`);
+            error.statusCode = 403;
+            throw error;
+        }
+
+        // 2. Check if the student is already in a project
+        const isInProject = await supervisorRepository.checkStudentProjectMembership(userId);
+        if (isInProject) {
+            const error = new Error('This student is already part of an active project and cannot be assigned as a leader.');
+            error.statusCode = 403;
             throw error;
         }
 

@@ -2,6 +2,15 @@ const db = require('../Database');
 
 class SupervisorRepository {
     /**
+     * Check if a student is currently part of any project
+     */
+    async checkStudentProjectMembership(userId) {
+        const query = 'SELECT 1 FROM Project_Members WHERE student_id = $1 LIMIT 1';
+        const result = await db.query(query, [userId]);
+        return result.rows.length > 0;
+    }
+
+    /**
      * Get all students with their matric numbers
      */
     async getAllStudents() {

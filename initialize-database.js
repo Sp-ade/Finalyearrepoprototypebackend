@@ -36,6 +36,12 @@ async function initializeDatabase() {
         await db.ensureStaffPermissionsTable();
         console.log('✓ Staff permission tables ready\n');
 
+        // Step 6: Create activity logs table
+        console.log('Step 6: Creating activity logs table...');
+        const createActivityLogsTable = require('./scripts/create-activity-logs-table');
+        await createActivityLogsTable();
+        console.log('✓ Activity logs table created\n');
+
         console.log('✅ Database initialization complete!');
         console.log('All tables have been created successfully.');
 
