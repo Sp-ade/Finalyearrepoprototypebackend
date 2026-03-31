@@ -18,6 +18,7 @@ const app = express()
 const cookieParser = require('cookie-parser')
 const helmet = require('helmet')
 
+app.set('trust proxy', 1);
 app.use(helmet())
 app.use(express.json())
 app.use(cookieParser())
