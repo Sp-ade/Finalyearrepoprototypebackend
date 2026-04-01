@@ -7,13 +7,6 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body
     const result = await authService.login(email, password)
     
-    // Set cookie
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 3600000 // 1 hour
-    });
 
     res.json({
       success: true,
@@ -26,11 +19,6 @@ exports.login = async (req, res, next) => {
 }
 
 exports.logout = async (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none'
-  });
   res.json({ success: true, message: 'Logged out successfully' });
 }
 
