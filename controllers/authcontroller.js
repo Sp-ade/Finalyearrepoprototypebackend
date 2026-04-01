@@ -8,11 +8,10 @@ exports.login = async (req, res, next) => {
     const result = await authService.login(email, password)
     
     // Set cookie
-    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('token', result.token, {
       httpOnly: true,
-      secure: true // true on HTTPS (Render), false on HTTP (Localhost)
-      sameSite: 'none' // 'none' for cross-site Render, 'lax' for same-origin local
+      secure: true,
+      sameSite: 'none',
       maxAge: 3600000 // 1 hour
     });
 
@@ -26,11 +25,10 @@ exports.login = async (req, res, next) => {
 }
 
 exports.logout = async (req, res) => {
-  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('token', {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax'
+    secure: true,
+    sameSite: 'none'
   });
   res.json({ success: true, message: 'Logged out successfully' });
 }
