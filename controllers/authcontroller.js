@@ -11,8 +11,8 @@ exports.login = async (req, res, next) => {
     const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('token', result.token, {
       httpOnly: true,
-      secure: isProduction, // true on HTTPS (Render), false on HTTP (Localhost)
-      sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site Render, 'lax' for same-origin local
+      secure: true // true on HTTPS (Render), false on HTTP (Localhost)
+      sameSite: 'none' // 'none' for cross-site Render, 'lax' for same-origin local
       maxAge: 3600000 // 1 hour
     });
 
