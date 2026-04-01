@@ -10,7 +10,7 @@ module.exports = {
   getRoleSpecificData: async (userId, role) => {
     if (role === 'student') {
       const result = await db.query(
-        'SELECT student_matric_no, department, role FROM Students WHERE user_id = $1',
+        'SELECT student_matric_no, department FROM Students WHERE user_id = $1',
         [userId]
       )
       if (result.rows[0]) {
