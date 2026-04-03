@@ -3,7 +3,7 @@ require('dotenv').config()
 
 // Use DATABASE_URL from environment
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:pgfinalyeartest@localhost:5432/nilefinalyeardb'
+  connectionString: process.env.DATABASE_URL
 })
 
 module.exports = {
@@ -179,7 +179,7 @@ module.exports = {
         ALTER TABLE Access_Requests_Student 
         ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'view' CHECK (mode IN ('view', 'edit'));
       `);
-      
+
       // Update UNIQUE constraint to include mode
       // First drop old constraint if it exists (might be named by Postgres automatically)
       // Usually it's access_requests_student_student_id_project_id_key
@@ -187,7 +187,7 @@ module.exports = {
         ALTER TABLE Access_Requests_Student 
         DROP CONSTRAINT IF EXISTS access_requests_student_student_id_project_id_key;
       `);
-      
+
       await pool.query(`
         ALTER TABLE Access_Requests_Student 
         ADD CONSTRAINT access_requests_student_student_id_project_id_mode_key UNIQUE(student_id, project_id, mode);
@@ -235,7 +235,7 @@ module.exports = {
           UNIQUE (supervisor_id, project_id, type)
         );
       `);
-      
+
       // Migration: ensuring columns and constraint if table already exists
       await pool.query(`
         ALTER TABLE Staff_Permissions
