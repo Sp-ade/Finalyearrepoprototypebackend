@@ -176,4 +176,4 @@ exports.signup = async ({ email, password, firstName, lastName, role, studentId,
     role: user.role
   }
 }
-
+

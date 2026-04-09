@@ -3,24 +3,24 @@ const jwt = require('../utils/jwt');
 const authenticate = (req, res, next) => {
     // Check for token in Authorization header first, then query param, then fallback to cookies
     const token = req.headers.authorization?.split(' ')[1] || req.query.token || req.cookies.token;
-    
+
     if (!token) {
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Authentication required. Please log in.' 
+        return res.status(401).json({
+            success: false,
+            message: 'Authentication required. Please log in.'
         });
     }
 
     try {
         const decoded = jwt.verify(token);
         req.user = decoded;
-        
+
         next();
     } catch (err) {
         console.error('JWT Verification Error:', err.message);
-        return res.status(401).json({ 
-            success: false, 
-            message: 'Session expired or invalid token. Please log in again.' 
+        return res.status(401).json({
+            success: false,
+            message: 'Session expired or invalid token. Please log in again.'
         });
     }
 };
@@ -30,7 +30,7 @@ const authenticate = (req, res, next) => {
  */
 const optionalAuthenticate = (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1] || req.query.token || req.cookies.token;
-    
+
     if (token) {
         try {
             const decoded = jwt.verify(token);
@@ -40,15 +40,15 @@ const optionalAuthenticate = (req, res, next) => {
             console.error('Optional JWT Verification Error:', err.message);
         }
     }
-    
+
     next();
 };
 
 const isAdmin = (req, res, next) => {
     if (req.user?.role !== 'admin') {
-        return res.status(403).json({ 
-            success: false, 
-            message: 'Forbidden: Admin access required' 
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: Admin access required'
         });
     }
     next();
