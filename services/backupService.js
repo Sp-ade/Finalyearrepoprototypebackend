@@ -5,10 +5,21 @@ require('dotenv').config();
 
 const BACKUP_DIR = path.join(__dirname, '../backups');
 
-// Ensure backup directory exists
-if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
+/**
+ * Ensures the backup directory exists. 
+ * Called lazily when an operation is performed.
+ */
+const ensureBackupDir = () => {
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) {
+            fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        }
+        return true;
+    } catch (err) {
+        console.error('Failed to access backup directory:', err.message);
+        return false;
+    }
+};
 
 /**
  * Get the path to PostgreSQL tools
@@ -20,15 +31,13 @@ const getToolPath = (toolName) => {
 
     // Default paths based on OS
     if (process.platform === 'win32') {
-        // Fallback for common local installation found during research
         const defaultWinPath = `C:\\Program Files\\PostgreSQL\\18\\bin\\${toolName}.exe`;
         if (fs.existsSync(defaultWinPath)) {
             return `"${defaultWinPath}"`;
         }
-        return toolName; // Try if it's in PATH
     }
     
-    return toolName; // For Linux/Render, usually in PATH
+    return toolName; // Default to global command
 };
 
 /**
@@ -36,6 +45,10 @@ const getToolPath = (toolName) => {
  */
 const createBackup = () => {
     return new Promise((resolve, reject) => {
+        if (!ensureBackupDir()) {
+            return reject(new Error('Cannot access backup directory'));
+        }
+
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `backup-${timestamp}.sql`;
         const filepath = path.join(BACKUP_DIR, filename);
@@ -47,23 +60,25 @@ const createBackup = () => {
             return reject(new Error('DATABASE_URL is not defined in .env'));
         }
 
-        // Use --clean to drop objects before creating them, and --if-exists to avoid errors on drop
-        // --no-owner and --no-privileges make the backup more portable
         const command = `${pgDump} --dbname="${dbUrl}" --file="${filepath}" --clean --if-exists --no-owner --no-privileges`;
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
                 console.error(`Backup error: ${error.message}`);
                 console.error(`Stderr: ${stderr}`);
-                return reject(error);
+                return reject(new Error(`Database dump failed: ${stderr || error.message}`));
             }
             
-            const stats = fs.statSync(filepath);
-            resolve({
-                filename,
-                size: stats.size,
-                createdAt: stats.birthtime
-            });
+            try {
+                const stats = fs.statSync(filepath);
+                resolve({
+                    filename,
+                    size: stats.size,
+                    createdAt: stats.birthtime
+                });
+            } catch (statsError) {
+                reject(new Error('Backup file was created but could not be verified'));
+            }
         });
     });
 };
@@ -72,17 +87,24 @@ const createBackup = () => {
  * List all backups
  */
 const listBackups = () => {
-    return fs.readdirSync(BACKUP_DIR)
-        .filter(file => file.endsWith('.sql'))
-        .map(file => {
-            const stats = fs.statSync(path.join(BACKUP_DIR, file));
-            return {
-                filename: file,
-                size: stats.size,
-                createdAt: stats.birthtime
-            };
-        })
-        .sort((a, b) => b.createdAt - a.createdAt);
+    if (!fs.existsSync(BACKUP_DIR)) return [];
+    
+    try {
+        return fs.readdirSync(BACKUP_DIR)
+            .filter(file => file.endsWith('.sql'))
+            .map(file => {
+                const stats = fs.statSync(path.join(BACKUP_DIR, file));
+                return {
+                    filename: file,
+                    size: stats.size,
+                    createdAt: stats.birthtime
+                };
+            })
+            .sort((a, b) => b.createdAt - a.createdAt);
+    } catch (err) {
+        console.error('Error listing backups:', err.message);
+        return [];
+    }
 };
 
 /**
@@ -103,24 +125,18 @@ const restoreBackup = (filename) => {
             return reject(new Error('DATABASE_URL is not defined in .env'));
         }
 
-        // For restore, we might want to drop and recreate the schema or tables.
-        // But simply running the SQL file usually works if the file contains 
-        // DROP TABLE IF EXISTS or similar, or if we're restoring to a clean DB.
-        // Standard pg_dump doesn't include DROPs unless -c is specified.
-        
         const command = `${psql} --dbname="${dbUrl}" --file="${filepath}"`;
 
         exec(command, async (error, stdout, stderr) => {
             if (error) {
                 console.error(`Restore error: ${error.message}`);
                 console.error(`Stderr: ${stderr}`);
-                return reject(error);
+                return reject(new Error(`Restore failed: ${stderr || error.message}`));
             }
 
             try {
-                // Sync sequences after restore to prevent "duplicate key" errors
                 await resetSequences();
-                resolve({ success: true, message: 'Restore completed and sequences synchronized successfully' });
+                resolve({ success: true, message: 'Restore completed and sequences synchronized' });
             } catch (syncError) {
                 console.warn(`Restore successful but sequence sync failed: ${syncError.message}`);
                 resolve({ success: true, message: 'Restore completed but sequence synchronization failed' });
@@ -130,13 +146,12 @@ const restoreBackup = (filename) => {
 };
 
 /**
- * Reset all sequences in the public schema to their correct values
- * This prevents "duplicate key value violates unique constraint" errors after a restore
+ * Reset all sequences
  */
 const resetSequences = async () => {
+    // Dynamic import to prevent circular dependency at startup
     const { pool } = require('../Database');
     
-    // This PL/pgSQL block finds all columns with nextval() defaults and resets their sequences
     const resetSql = `
         DO $$ 
         DECLARE
