@@ -1,5 +1,8 @@
 const adminService = require('../services/adminService');
 const activityService = require('../services/activityService');
+const backupService = require('../services/backupService');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Get all users
@@ -342,6 +345,91 @@ const getPendingSubmissions = async (req, res) => {
     }
 };
 
+/**
+ * List all database backups
+ */
+const listBackups = async (req, res) => {
+    try {
+        const backups = backupService.listBackups();
+        res.status(200).json({ success: true, backups });
+    } catch (error) {
+        console.error('Error listing backups:', error);
+        res.status(500).json({ success: false, message: 'Error listing backups', error: error.message });
+    }
+};
+
+/**
+ * Create a new database backup
+ */
+const createBackup = async (req, res) => {
+    try {
+        const backup = await backupService.createBackup();
+        
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP', `Created database backup: ${backup.filename}`);
+
+        res.status(201).json({ success: true, backup, message: 'Backup created successfully' });
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        res.status(500).json({ success: false, message: 'Error creating backup', error: error.message });
+    }
+};
+
+/**
+ * Restore from a backup
+ */
+const restoreBackup = async (req, res) => {
+    try {
+        const { filename } = req.body;
+        if (!filename) {
+            return res.status(400).json({ success: false, message: 'Filename is required' });
+        }
+
+        const result = await backupService.restoreBackup(filename);
+
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'DATABASE_RESTORE', `Restored database from backup: ${filename}`);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error restoring backup:', error);
+        res.status(500).json({ success: false, message: 'Error restoring backup', error: error.message });
+    }
+};
+
+/**
+ * Delete a backup
+ */
+const deleteBackup = async (req, res) => {
+    try {
+        const { filename } = req.params;
+        const result = backupService.deleteBackup(filename);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error deleting backup:', error);
+        res.status(500).json({ success: false, message: 'Error deleting backup', error: error.message });
+    }
+};
+
+/**
+ * Download a backup file
+ */
+const downloadBackup = async (req, res) => {
+    try {
+        const { filename } = req.params;
+        const filePath = path.join(__dirname, '../backups', filename);
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ success: false, message: 'Backup file not found' });
+        }
+
+        res.download(filePath);
+    } catch (error) {
+        console.error('Error downloading backup:', error);
+        res.status(500).json({ success: false, message: 'Error downloading backup', error: error.message });
+    }
+};
+
 module.exports = {
     getAllUsers,
     getUserStats,
@@ -357,5 +445,10 @@ module.exports = {
     reassignProjectSupervisor,
     getAllActivityLogs,
     getLogActionTypes,
-    getPendingSubmissions
+    getPendingSubmissions,
+    listBackups,
+    createBackup,
+    restoreBackup,
+    deleteBackup,
+    downloadBackup
 };

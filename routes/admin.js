@@ -36,4 +36,11 @@ router.delete('/tags/:id', adminController.deleteTag);
 router.put('/students/:studentId/reassign-supervisor', adminController.reassignLeaderSupervisor);
 router.put('/projects/:projectId/reassign-supervisor', adminController.reassignProjectSupervisor);
 
+// Database Management Routes
+router.get('/database/backups', adminController.listBackups);
+router.post('/database/backup', adminController.createBackup);
+router.post('/database/restore', adminController.restoreBackup);
+router.delete('/database/backup/:filename', adminController.deleteBackup);
+router.get('/database/backup/:filename/download', adminController.downloadBackup);
+
 module.exports = router;

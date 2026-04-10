@@ -2,10 +2,10 @@ const activityRepository = require('../repositories/activityRepository');
 
 class ActivityService {
     /**
-     * Log a project activity
+     * Log an activity
      */
     async log(projectId, userId, actionType, description) {
-        if (!projectId || !userId) return null;
+        if (!userId) return null;
         return await activityRepository.createLog(projectId, userId, actionType, description);
     }
 
