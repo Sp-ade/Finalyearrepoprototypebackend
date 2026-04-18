@@ -62,8 +62,7 @@ The server will start at `http://localhost:3000`
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/nilefinalyeardb` |
 | `PORT` | Server port | `3000` |
 | `SEED_EMAIL` | Demo user email for database seeding | `test@nileuniversity.edu.ng` |

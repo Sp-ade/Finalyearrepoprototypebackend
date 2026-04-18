@@ -1,5 +1,7 @@
 const nodemailer = require("nodemailer");
 const dns = require('dns');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Force IPv4 globally for this module to fix Render ENETUNREACH errors
 if (dns.setDefaultResultOrder) {

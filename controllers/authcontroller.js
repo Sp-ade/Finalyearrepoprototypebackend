@@ -44,27 +44,115 @@ exports.verifyEmail = async (req, res, next) => {
     }
     const decoded = jwt.verify(token)
     await authService.verifyEmail(token, decoded.email)
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     res.send(`
-      <html>
-        <head>
-          <title>Email Verified</title>
-        </head>
-        <body style="
-          display:flex;
-          justify-content:center;
-          align-items:center;
-          height:100vh;
-          font-family:Arial;
-          background:#f4f4f4;
-          text-align:center;
-        ">
-          <div>
-            <h1 style="color:#28a745;">Email Verified Successfully</h1>
-            <div style="font-size:80px;color:#28a745;">✔</div>
-            <p>You can now log in to your account.</p>
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Account Verified | Nile University Repository</title>
+          <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+              
+              body {
+                  margin: 0;
+                  padding: 0;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  min-height: 100vh;
+                  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                  color: #212529;
+              }
+
+              .container {
+                  background: white;
+                  padding: 3rem;
+                  border-radius: 20px;
+                  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+                  text-align: center;
+                  max-width: 450px;
+                  width: 90%;
+                  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+              }
+
+              @keyframes slideUp {
+                  from { opacity: 0; transform: translateY(20px); }
+                  to { opacity: 1; transform: translateY(0); }
+              }
+
+              .icon-circle {
+                  width: 80px;
+                  height: 80px;
+                  background: #eefdf3;
+                  border-radius: 50%;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  margin: 0 auto 2rem;
+              }
+
+              .checkmark {
+                  color: #28a745;
+                  font-size: 40px;
+                  font-weight: bold;
+              }
+
+              h1 {
+                  font-size: 24px;
+                  margin-bottom: 1rem;
+                  color: #1a1a1a;
+                  font-weight: 700;
+              }
+
+              p {
+                  color: #6c757d;
+                  line-height: 1.6;
+                  margin-bottom: 2.5rem;
+                  font-size: 16px;
+              }
+
+              .btn {
+                  display: inline-block;
+                  background: #1a1a1a;
+                  color: white;
+                  padding: 12px 32px;
+                  text-decoration: none;
+                  border-radius: 10px;
+                  font-weight: 600;
+                  transition: all 0.3s ease;
+                  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+              }
+
+              .btn:hover {
+                  background: #333;
+                  transform: translateY(-2px);
+                  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+              }
+
+              .brand {
+                  margin-top: 2rem;
+                  font-size: 12px;
+                  color: #adb5bd;
+                  letter-spacing: 1px;
+                  text-transform: uppercase;
+              }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="icon-circle">
+                  <span class="checkmark">✓</span>
+              </div>
+              <h1>Account Verified!</h1>
+              <p>Your email has been successfully verified. You can now access your account and start managing your projects.</p>
+              <a href="${FRONTEND_URL}/login" class="btn">Continue to Login</a>
+              <div class="brand">Nile University Repository</div>
           </div>
-        </body>
+      </body>
       </html>
     `);
 

@@ -59,12 +59,26 @@ exports.getUserByEmail = async (email) => {
 }
 
 exports.verifyEmail = async (token, decodedEmail) => {
-  const user = await userRepo.findByVerificationToken(decodedEmail, token)
+  const user = await userRepo.findByEmail(decodedEmail)
+  
   if (!user) {
+    const error = new Error('User not found')
+    error.statusCode = 404
+    throw error
+  }
+
+  // If already verified, don't throw an error, just return (Success)
+  if (user.is_verified) {
+    return
+  }
+
+  // If not verified, check if tokens match
+  if (user.verification_token !== token) {
     const error = new Error('Invalid or expired token')
     error.statusCode = 400
     throw error
   }
+
   await userRepo.markAsVerified(decodedEmail)
 }
 
