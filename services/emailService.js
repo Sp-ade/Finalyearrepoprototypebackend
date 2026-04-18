@@ -47,8 +47,10 @@ const sendVerificationEmail = async (email, token) => {
   const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
   const verificationLink = `${BACKEND_URL}/api/verify-email?token=${token}`;
 
+  console.log(`📧 Sending verification email to: ${email}`);
+  console.log(`🔗 Verification link: ${verificationLink}`);
+
   try {
-    console.log(`📧 Sending verification email to: ${email}`);
     await transporter.sendMail({
       from: EMAIL_FROM,
       to: email,

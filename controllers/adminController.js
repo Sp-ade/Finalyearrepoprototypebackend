@@ -66,6 +66,41 @@ const updateUserStatus = async (req, res) => {
 };
 
 /**
+ * Permanently delete a user
+ */
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Prevent admins from deleting themselves via this route for safety
+        if (parseInt(id) === req.user.sub) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot delete your own account while logged in.'
+            });
+        }
+
+        const result = await adminService.deleteUser(parseInt(id));
+
+        if (!result.success) {
+            return res.status(404).json(result);
+        }
+
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'USER_DELETED', result.message);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting user',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get project statistics
  */
 const getProjectStats = async (req, res) => {
@@ -434,6 +469,7 @@ module.exports = {
     getAllUsers,
     getUserStats,
     updateUserStatus,
+    deleteUser,
     getProjectStats,
     getRequestStats,
     getAllRequests,

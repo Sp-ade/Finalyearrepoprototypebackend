@@ -12,6 +12,7 @@ router.use(verifyAdmin);
 router.get('/users', adminController.getAllUsers);
 router.get('/users/stats', adminController.getUserStats);
 router.put('/users/:id/status', adminController.updateUserStatus);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Project Statistics Routes
 router.get('/projects/stats', adminController.getProjectStats);

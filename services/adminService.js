@@ -477,6 +477,48 @@ class AdminService {
             submissions: submissions.filter(s => s.status === 'Pending')
         };
     }
+
+    /**
+     * Permanently delete a user and all their associated profile data
+     */
+    async deleteUser(userId) {
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Validate user existence
+            const checkRes = await client.query('SELECT id, email, role FROM Users WHERE id = $1', [userId]);
+            if (checkRes.rows.length === 0) {
+                return { success: false, message: 'User not found' };
+            }
+            const user = checkRes.rows[0];
+
+            // 2. Manual cleanup for tables without CASCADE or that need SET NULL explicitly
+            // Unlink supervisor from artifacts they uploaded
+            await client.query('UPDATE Project_Artifacts SET uploaded_by = NULL WHERE uploaded_by = $1', [userId]);
+            
+            // Unlink supervisor from any projects they manage (SET NULL)
+            // Note: Schema already has ON DELETE SET NULL, but doing it explicitly inside transaction is safer
+            await client.query('UPDATE Projects SET supervisor_id = NULL WHERE supervisor_id = $1', [userId]);
+
+            // 3. Delete from parent table (CASCADE will handle Students, Supervisors, admins, Notifications, etc.)
+            await client.query('DELETE FROM Users WHERE id = $1', [userId]);
+
+            await client.query('COMMIT');
+            
+            return {
+                success: true,
+                message: `User ${user.email} and all associated data deleted successfully`,
+                deletedId: userId
+            };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error in deleteUser transaction:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = new AdminService();
