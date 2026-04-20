@@ -2,6 +2,7 @@ const db = require('./Database');
 const createProjectTables = require('./create-project-tables');
 const createRequestTables = require('./create-request-tables');
 const createSubmissionTable = require('./create-submission-table');
+const seedTags = require('./scripts/seed-tags');
 
 async function initializeDatabase() {
     try {
@@ -41,6 +42,11 @@ async function initializeDatabase() {
         const createActivityLogsTable = require('./scripts/create-activity-logs-table');
         await createActivityLogsTable();
         console.log('✓ Activity logs table created\n');
+
+        // Step 7: Seed preset tags
+        console.log('Step 7: Seeding preset tags...');
+        await seedTags();
+        console.log('✓ Preset tags ready\n');
 
         console.log('✅ Database initialization complete!');
         console.log('All tables have been created successfully.');
