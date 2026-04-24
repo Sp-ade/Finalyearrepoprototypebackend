@@ -3,9 +3,10 @@ const router = express.Router()
 const controller = require('../controllers/authcontroller')
 const signupController = require('../controllers/signupController')
 const { authenticate, isAdmin } = require('../middleware/auth')
+const loginRateLimiter = require('../middleware/loginRateLimiter')
 
 router.post('/signup', signupController.signup)
-router.post('/login', controller.login)
+router.post('/login', loginRateLimiter, controller.login)
 router.post('/logout', authenticate, controller.logout)
 router.get('/me', authenticate, controller.getUserByEmail)
 router.get('/verify-email', controller.verifyEmail)
@@ -17,5 +18,4 @@ router.post('/send-test-email', authenticate, isAdmin, controller.sendTestEmail)
 router.post('/update-password', authenticate, controller.updatePassword)
 //forgot your password (not yet implemented)
 // router.post('/forgot-password', controller.forgotPassword)
-// router.post('/register', controller.register) // optional
 module.exports = router

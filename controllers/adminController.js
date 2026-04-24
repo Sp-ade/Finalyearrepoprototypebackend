@@ -486,5 +486,33 @@ module.exports = {
     createBackup,
     restoreBackup,
     deleteBackup,
-    downloadBackup
+    downloadBackup,
+    uploadBackup
 };
+
+/**
+ * Upload a backup file manually
+ */
+async function uploadBackup(req, res) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${req.file.filename}`);
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Backup uploaded successfully',
+            backup: {
+                filename: req.file.filename,
+                size: req.file.size,
+                createdAt: new Date()
+            }
+        });
+    } catch (error) {
+        console.error('Error uploading backup:', error);
+        res.status(500).json({ success: false, message: 'Error uploading backup', error: error.message });
+    }
+}

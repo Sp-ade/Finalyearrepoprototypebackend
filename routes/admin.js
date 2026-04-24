@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { verifyAdmin } = require('../middleware/adminAuth');
-const { authenticate } = require('../middleware/auth')
+const { authenticate } = require('../middleware/auth');
+const backupUpload = require('../utils/backupUpload');
 
 // Apply authentication and admin verification middleware to all routes
 router.use(authenticate);
@@ -43,5 +44,6 @@ router.post('/database/backup', adminController.createBackup);
 router.post('/database/restore', adminController.restoreBackup);
 router.delete('/database/backup/:filename', adminController.deleteBackup);
 router.get('/database/backup/:filename/download', adminController.downloadBackup);
+router.post('/database/backup/upload', backupUpload.single('backup'), adminController.uploadBackup);
 
 module.exports = router;
