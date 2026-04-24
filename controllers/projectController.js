@@ -220,7 +220,13 @@ const updateProject = async (req, res) => {
                     [id, studentId]
                 );
 
-                if (editRequestRes.rows.length === 0) {
+                // Allow update if they are the submitter and status is 'Pending' or 'Changes Requested'
+                const submissionCheck = await db.query(
+                    "SELECT 1 FROM Project_Submissions WHERE project_id = $1 AND student_id = $2 AND status IN ('Pending', 'Changes Requested')",
+                    [id, studentId]
+                );
+
+                if (editRequestRes.rows.length === 0 && submissionCheck.rows.length === 0) {
                     return res.status(403).json({ message: 'Unauthorized to update this project' });
                 }
             }
