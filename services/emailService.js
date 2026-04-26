@@ -99,7 +99,43 @@ const sendLoginNotification = async (email) => {
   }
 };
 
+const sendResetPasswordEmail = async (email, token) => {
+  const BACKEND_URL = process.env.BACKEND_URL;
+  const resetLink = `${BACKEND_URL}/api/reset-password?token=${token}`;
+
+  console.log(`📧 Sending reset password email to: ${email}`);
+  console.log(`🔗 Reset link: ${resetLink}`);
+
+  try {
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: email,
+      subject: "Reset Your Password - Nile University Repository",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+          <h2 style="color: #2b4593; text-align: center;">Reset Your Password</h2>
+          <p>We received a request to reset your password for the Nile University Repository. Click the button below to choose a new password:</p>
+
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${resetLink}" 
+               style="background-color: #2b4593; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Reset Password
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 12px;">This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+    console.log(`✅ Reset password email sent to ${email}`);
+  } catch (err) {
+    console.error('❌ Failed to send reset password email:', err.message);
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendLoginNotification,
+  sendResetPasswordEmail,
 };
+

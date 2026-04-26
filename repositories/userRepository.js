@@ -67,5 +67,25 @@ module.exports = {
       [passwordHash, userId]
     )
     return result.rows[0]
+  },
+  updateResetToken: async (email, token, expiry) => {
+    await db.query(
+      'UPDATE Users SET reset_token = $1, reset_expires = $2 WHERE email = $3',
+      [token, expiry, email]
+    )
+  },
+  findByResetToken: async (token) => {
+    const result = await db.query(
+      'SELECT * FROM Users WHERE reset_token = $1',
+      [token]
+    )
+    return result.rows[0] || null
+  },
+  clearResetToken: async (userId) => {
+    await db.query(
+      'UPDATE Users SET reset_token = NULL, reset_expires = NULL WHERE id = $1',
+      [userId]
+    )
   }
 }
+

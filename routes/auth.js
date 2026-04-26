@@ -16,6 +16,9 @@ router.post('/force-verify', authenticate, isAdmin, controller.forceVerify)
 router.post('/send-test-email', authenticate, isAdmin, controller.sendTestEmail)
 // update user password
 router.post('/update-password', authenticate, controller.updatePassword)
-//forgot your password (not yet implemented)
-// router.post('/forgot-password', controller.forgotPassword)
+// forgot your password
+router.post('/forgot-password', controller.forgotPassword)
+router.get('/reset-password', controller.renderResetPasswordPage)
+router.post('/reset-password', express.urlencoded({ extended: true }), controller.handleResetPassword)
+
 module.exports = router

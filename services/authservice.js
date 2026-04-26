@@ -113,6 +113,71 @@ exports.updatePassword = async (email, currentPassword, newPassword) => {
   const passwordHash = await bcrypt.hash(newPassword, saltRounds)
   return await userRepo.updatePasswordHash(user.id, passwordHash)
 }
+exports.forgotPassword = async (email) => {
+  const user = await userRepo.findByEmail(email)
+  if (!user) {
+    const error = new Error('No account found with that email address')
+    error.statusCode = 404
+    throw error
+  }
+
+  // Generate reset token (1 hour expiry)
+  const resetToken = jwt.sign({ email: user.email, type: 'reset' }, { expiresIn: '1h' })
+  const resetExpiry = new Date(Date.now() + 60 * 60 * 1000)
+
+  await userRepo.updateResetToken(user.email, resetToken, resetExpiry)
+
+  const { sendResetPasswordEmail } = require('../services/emailService')
+  sendResetPasswordEmail(user.email, resetToken).catch(err => {
+    console.error('❌ Background Reset Password Email Error:', err.message);
+  })
+}
+
+exports.resetPassword = async (token, newPassword) => {
+  if (newPassword.length < 6) {
+    const error = new Error('Password must be at least 6 characters long')
+    error.statusCode = 400
+    throw error
+  }
+
+  try {
+    const decoded = jwt.verify(token)
+    if (decoded.type !== 'reset') {
+      const error = new Error('Invalid token type')
+      error.statusCode = 400
+      throw error
+    }
+
+    const user = await userRepo.findByResetToken(token)
+    
+    if (!user) {
+      const error = new Error('Invalid or expired reset token')
+      error.statusCode = 400
+      throw error
+    }
+
+    // Check expiry manually just in case
+    if (new Date() > new Date(user.reset_expires)) {
+      const error = new Error('Reset token has expired')
+      error.statusCode = 400
+      throw error
+    }
+
+    const saltRounds = 10
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds)
+    
+    await userRepo.updatePasswordHash(user.id, passwordHash)
+    await userRepo.clearResetToken(user.id)
+
+  } catch (err) {
+    if (err.name === 'TokenExpiredError' || err.name === 'JsonWebTokenError') {
+      const error = new Error('Invalid or expired reset token')
+      error.statusCode = 400
+      throw error
+    }
+    throw err
+  }
+}
 
 exports.signup = async ({ email, password, firstName, lastName, role, studentId, department }) => {
   // Validate required fields

@@ -45,6 +45,14 @@ module.exports = {
       ALTER TABLE Users
       ADD COLUMN IF NOT EXISTS verification_expires TIMESTAMP;
     `)
+    await pool.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);
+    `)
+    await pool.query(`
+      ALTER TABLE Users
+      ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP;
+    `)
 
     // Create Students table (child table)
     await pool.query(`
