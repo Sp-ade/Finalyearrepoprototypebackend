@@ -10,6 +10,8 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+const FILE_SIZE_LIMIT = 8 * 1024 * 1024; // 8MB
+
 // Create storage for different file types
 const createCloudinaryStorage = (folder, allowedFormats, transformations = [], resourceType = 'auto') => {
     return new CloudinaryStorage({
@@ -56,10 +58,10 @@ const storageConfigs = {
 
 // Multer upload instances
 const uploads = {
-    profilePicture: multer({ storage: storageConfigs.profilePictures }),
-    document: multer({ storage: storageConfigs.documents }),
-    projectArtifact: multer({ storage: storageConfigs.projectArtifacts }),
-    general: multer({ storage: storageConfigs.general })
+    profilePicture: multer({ storage: storageConfigs.profilePictures, limits: {filesize: FILE_SIZE_LIMIT } }),
+    document: multer({ storage: storageConfigs.documents, limits: {filesize: FILE_SIZE_LIMIT } }),
+    projectArtifact: multer({ storage: storageConfigs.projectArtifacts, limits: {filesize: FILE_SIZE_LIMIT } }),
+    general: multer({ storage: storageConfigs.general, limits: {filesize: FILE_SIZE_LIMIT } })
 };
 
 // Helper function to delete a file from Cloudinary
