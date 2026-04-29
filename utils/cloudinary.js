@@ -58,10 +58,10 @@ const storageConfigs = {
 
 // Multer upload instances
 const uploads = {
-    profilePicture: multer({ storage: storageConfigs.profilePictures, limits: {filesize: FILE_SIZE_LIMIT } }),
-    document: multer({ storage: storageConfigs.documents, limits: {filesize: FILE_SIZE_LIMIT } }),
-    projectArtifact: multer({ storage: storageConfigs.projectArtifacts, limits: {filesize: FILE_SIZE_LIMIT } }),
-    general: multer({ storage: storageConfigs.general, limits: {filesize: FILE_SIZE_LIMIT } })
+    profilePicture: multer({ storage: storageConfigs.profilePictures, limits: {fileSize: FILE_SIZE_LIMIT } }),
+    document: multer({ storage: storageConfigs.documents, limits: {fileSize: FILE_SIZE_LIMIT } }),
+    projectArtifact: multer({ storage: storageConfigs.projectArtifacts, limits: {fileSize: FILE_SIZE_LIMIT } }),
+    general: multer({ storage: storageConfigs.general, limits: {fileSize: FILE_SIZE_LIMIT } })
 };
 
 // Helper function to delete a file from Cloudinary
