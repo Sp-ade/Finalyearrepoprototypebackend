@@ -35,6 +35,10 @@ class ActivityService {
         const action = type === 'edit' ? 'Edit' : 'Delete';
         return await this.log(projectId, userId, 'PERMISSION_REVIEWED', `Staff ${action} permission ${status.toLowerCase()}`);
     }
+
+    async logStorageCleanup(userId, stats) {
+        return await this.log(null, userId, 'STORAGE_CLEANUP', `Cleaned up ${stats.deletedCount} unused storage files.`);
+    }
 }
 
 module.exports = new ActivityService();

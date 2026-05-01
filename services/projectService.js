@@ -221,29 +221,6 @@ class ProjectService {
             if (artifacts && artifacts.length > 0) {
                 for (const artifact of artifacts) {
                     try {
-                        if (artifact.file_path) {
-                            const urlParts = artifact.file_path.split('/');
-                            const uploadIndex = urlParts.indexOf('upload');
-
-                            if (uploadIndex !== -1 && uploadIndex < urlParts.length - 1) {
-                                let publicIdParts = urlParts.slice(uploadIndex + 1);
-                                if (publicIdParts.length > 0 && publicIdParts[0].startsWith('v') && !isNaN(parseInt(publicIdParts[0].substring(1)))) {
-                                    publicIdParts = publicIdParts.slice(1);
-                                }
-                                const publicIdWithExt = publicIdParts.join('/');
-                                const lastDotIndex = publicIdWithExt.lastIndexOf('.');
-                                const publicId = lastDotIndex !== -1 ? publicIdWithExt.substring(0, lastDotIndex) : publicIdWithExt;
-
-                                if (publicId) {
-                                    await deleteFile(publicId);
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.error(`[ProjectService] Failed to delete artifact ${artifact.artifact_id} from Cloudinary:`, err);
-                    }
-
-                    try {
                         await artifactRepository.deleteArtifact(projectId, artifact.artifact_id);
                     } catch (dbErr) {
                         console.error(`[ProjectService] Failed to delete artifact ${artifact.artifact_id} from DB:`, dbErr);

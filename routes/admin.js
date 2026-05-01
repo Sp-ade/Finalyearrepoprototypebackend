@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const storageController = require('../controllers/storageController');
 const { verifyAdmin } = require('../middleware/adminAuth');
 const { authenticate } = require('../middleware/auth');
 const backupUpload = require('../utils/backupUpload');
@@ -45,5 +46,8 @@ router.post('/database/restore', adminController.restoreBackup);
 router.delete('/database/backup/:filename', adminController.deleteBackup);
 router.get('/database/backup/:filename/download', adminController.downloadBackup);
 router.post('/database/backup/upload', backupUpload.single('backup'), adminController.uploadBackup);
+
+// Storage Management Routes
+router.post('/storage/cleanup', storageController.cleanupCloudinary);
 
 module.exports = router;
