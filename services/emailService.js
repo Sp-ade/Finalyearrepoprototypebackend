@@ -15,20 +15,23 @@ const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EM
 // Configure transporter with Gmail-friendly defaults
 let transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: (process.env.EMAIL_PORT == 465), // Only true for 465
+  port: parseInt(process.env.EMAIL_PORT) || 465, // Port 465 is often more reliable on Render
+  secure: (parseInt(process.env.EMAIL_PORT) === 465 || !process.env.EMAIL_PORT), // True if 465 or default
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   // CRITICAL: Force IPv4 for this specific connection
+  // This helps bypass Render's common ENETUNREACH IPv6 issues
   lookup: (hostname, options, callback) => {
-    dns.lookup(hostname, { family: 4 }, callback);
+    dns.lookup(hostname, 4, (err, address, family) => {
+      callback(err, address, family);
+    });
   },
-  // STARTTLS settings for 587
-  requireTLS: true,
+  // TLS settings
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2'
   }
 });
 
