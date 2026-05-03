@@ -16,8 +16,8 @@ const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EM
 let transporter = nodemailer.createTransport({
   // Hardcoding the IPv4 address for smtp.gmail.com to bypass Render's IPv6 resolution issues
   host: "74.125.133.108", 
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // Port 587 uses STARTTLS, so secure must be false
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
