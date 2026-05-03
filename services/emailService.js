@@ -14,28 +14,22 @@ const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EM
 
 // Configure transporter with Gmail-friendly defaults
 let transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.googlemail.com", // googlemail.com is often more stable on some networks
-  port: parseInt(process.env.EMAIL_PORT) || 465,
-  secure: true, // Force SSL for port 465
+  // Hardcoding the IPv4 address for smtp.gmail.com to bypass Render's IPv6 resolution issues
+  host: "74.125.133.108", 
+  port: 465,
+  secure: true,
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // CRITICAL: Force IPv4 for this specific connection
-  // This version of lookup is more explicit to ensure IPv6 is never returned
-  lookup: (hostname, options, callback) => {
-    dns.lookup(hostname, { family: 4 }, (err, address, family) => {
-      if (err) return callback(err);
-      callback(null, address, 4);
-    });
-  },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  // TLS settings
+  // Since we are using an IP, we must provide the servername for SSL verification
   tls: {
+    servername: 'smtp.gmail.com',
     rejectUnauthorized: false,
     minVersion: 'TLSv1.2'
-  }
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000
 });
 
 // Verify connection configuration on startup
