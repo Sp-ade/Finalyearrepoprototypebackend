@@ -14,20 +14,23 @@ const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EM
 
 // Configure transporter with Gmail-friendly defaults
 let transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.EMAIL_PORT) || 465, // Port 465 is often more reliable on Render
-  secure: (parseInt(process.env.EMAIL_PORT) === 465 || !process.env.EMAIL_PORT), // True if 465 or default
+  host: process.env.EMAIL_HOST || "smtp.googlemail.com", // googlemail.com is often more stable on some networks
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true, // Force SSL for port 465
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   // CRITICAL: Force IPv4 for this specific connection
-  // This helps bypass Render's common ENETUNREACH IPv6 issues
+  // This version of lookup is more explicit to ensure IPv6 is never returned
   lookup: (hostname, options, callback) => {
-    dns.lookup(hostname, 4, (err, address, family) => {
-      callback(err, address, family);
+    dns.lookup(hostname, { family: 4 }, (err, address, family) => {
+      if (err) return callback(err);
+      callback(null, address, 4);
     });
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
   // TLS settings
   tls: {
     rejectUnauthorized: false,
