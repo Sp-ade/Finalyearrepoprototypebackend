@@ -13,23 +13,23 @@ const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_FROM = process.env.EMAIL_FROM || `"Nile University Repository" <${EMAIL_USER}>`;
 
 // Configure transporter with Gmail-friendly defaults
+
 let transporter = nodemailer.createTransport({
-  // Hardcoding the IPv4 address for smtp.gmail.com to bypass Render's IPv6 resolution issues
-  host: "74.125.133.108", 
-  port: 587,
-  secure: false, // Port 587 uses STARTTLS, so secure must be false
+  host: '74.125.133.108', // Hardcoded IPv4 for smtp.gmail.com to avoid IPv6 ENETUNREACH
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: (process.env.EMAIL_PORT == 465), // Only true for 465
   auth: {
     user: EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // Since we are using an IP, we must provide the servername for SSL verification
+  // Extra IPv4 enforcement at the socket level
+  family: 4,
+  // STARTTLS settings for 587
+  requireTLS: true,
   tls: {
-    servername: 'smtp.gmail.com',
     rejectUnauthorized: false,
-    minVersion: 'TLSv1.2'
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000
+    servername: 'smtp.gmail.com' // SNI must still use the hostname even with a hardcoded IP
+  }
 });
 
 // Verify connection configuration on startup
