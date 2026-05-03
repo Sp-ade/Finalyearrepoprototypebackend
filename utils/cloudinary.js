@@ -21,6 +21,7 @@ const createCloudinaryStorage = (folder, allowedFormats, transformations = [], r
                 folder: folder,
                 resource_type: resourceType,
                 allowed_formats: allowedFormats,
+                // moderation: 'perception_point', // Enable this after registering for the Perception Point add-on in Cloudinary
             };
 
             // For raw files, we MUST ensure the public_id includes the extension

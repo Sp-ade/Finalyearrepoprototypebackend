@@ -22,9 +22,16 @@ class ActivityRepository {
             SELECT 
                 al.*,
                 u.first_name || ' ' || u.last_name as performer_name,
-                u.role as performer_role
+                u.role as performer_role,
+                CASE 
+                    WHEN u.role = 'student' THEN s.student_matric_no
+                    WHEN u.role = 'supervisor' THEN sup.staff_id
+                    ELSE NULL
+                END as performer_identifier
             FROM activity_logs al
             LEFT JOIN Users u ON al.user_id = u.id
+            LEFT JOIN Students s ON u.id = s.user_id
+            LEFT JOIN Supervisors sup ON u.id = sup.user_id
             WHERE al.project_id = $1
             ORDER BY al.created_at DESC
         `;
@@ -40,9 +47,16 @@ class ActivityRepository {
             SELECT 
                 al.*,
                 u.first_name || ' ' || u.last_name as performer_name,
+                CASE 
+                    WHEN u.role = 'student' THEN s.student_matric_no
+                    WHEN u.role = 'supervisor' THEN sup.staff_id
+                    ELSE NULL
+                END as performer_identifier,
                 p.title as project_title
             FROM activity_logs al
             LEFT JOIN Users u ON al.user_id = u.id
+            LEFT JOIN Students s ON u.id = s.user_id
+            LEFT JOIN Supervisors sup ON u.id = sup.user_id
             LEFT JOIN Projects p ON al.project_id = p.project_id
             ORDER BY al.created_at DESC
             LIMIT $1
@@ -63,9 +77,16 @@ class ActivityRepository {
                 al.*,
                 u.first_name || ' ' || u.last_name as performer_name,
                 u.role as performer_role,
+                CASE 
+                    WHEN u.role = 'student' THEN s.student_matric_no
+                    WHEN u.role = 'supervisor' THEN sup.staff_id
+                    ELSE NULL
+                END as performer_identifier,
                 p.title as project_title
             FROM activity_logs al
             LEFT JOIN Users u ON al.user_id = u.id
+            LEFT JOIN Students s ON u.id = s.user_id
+            LEFT JOIN Supervisors sup ON u.id = sup.user_id
             LEFT JOIN Projects p ON al.project_id = p.project_id
             WHERE 1=1
         `;

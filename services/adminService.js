@@ -29,6 +29,7 @@ class AdminService {
                     WHEN u.role = 'supervisor' THEN NULL
                     ELSE NULL
                 END as department,
+                s.role as student_role,
                 a.admin_level
             FROM Users u
             LEFT JOIN Students s ON u.id = s.user_id
@@ -421,6 +422,41 @@ class AdminService {
             success: true,
             message: 'Supervisor successfully reassigned for student leader',
             student: updated
+        };
+    }
+
+    /**
+     * Demote a student leader back to a regular student (admin only).
+     */
+    async demoteStudentLeader(studentUserId) {
+        // 1. Validate student existence and role
+        const student = await supervisorRepository.getStudentById(studentUserId);
+
+        if (!student) {
+            return { success: false, message: 'Student not found' };
+        }
+
+        if (student.role !== 'leader') {
+            return { success: false, message: 'Student is not currently a leader' };
+        }
+
+        // 2. Perform the demotion (set role to 'member' and clear supervisor)
+        const query = `
+            UPDATE Students 
+            SET role = 'member', leader_assigned_by = NULL 
+            WHERE user_id = $1 
+            RETURNING *
+        `;
+        const result = await db.query(query, [studentUserId]);
+
+        if (result.rows.length === 0) {
+            return { success: false, message: 'Failed to demote student' };
+        }
+
+        return {
+            success: true,
+            message: 'Student successfully demoted from leadership role',
+            student: result.rows[0]
         };
     }
     /**

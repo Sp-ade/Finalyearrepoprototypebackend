@@ -37,6 +37,7 @@ router.delete('/tags/:id', adminController.deleteTag);
 
 // Supervisor Reassignment Route
 router.put('/students/:studentId/reassign-supervisor', adminController.reassignLeaderSupervisor);
+router.put('/students/:studentId/demote', adminController.demoteStudentLeader);
 router.put('/projects/:projectId/reassign-supervisor', adminController.reassignProjectSupervisor);
 
 // Database Management Routes

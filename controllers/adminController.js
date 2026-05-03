@@ -323,6 +323,32 @@ const reassignProjectSupervisor = async (req, res) => {
 };
 
 /**
+ * Demote a student leader
+ */
+const demoteStudentLeader = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const result = await adminService.demoteStudentLeader(parseInt(studentId));
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'STUDENT_DEMOTED', `Demoted student (${result.student.student_matric_no}) from leadership role`);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error demoting student leader:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error demoting student leader',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get all activity logs with pagination and filters
  */
 const getAllActivityLogs = async (req, res) => {
@@ -479,6 +505,7 @@ module.exports = {
     deleteTag,
     reassignLeaderSupervisor,
     reassignProjectSupervisor,
+    demoteStudentLeader,
     getAllActivityLogs,
     getLogActionTypes,
     getPendingSubmissions,
