@@ -1,6 +1,6 @@
 const jwt = require('../utils/jwt');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
     // Check for token in Authorization header first, then query param, then fallback to cookies
     const token = req.headers.authorization?.split(' ')[1] || req.query.token || req.cookies.token;
 
@@ -14,6 +14,17 @@ const authenticate = (req, res, next) => {
     try {
         const decoded = jwt.verify(token);
         req.user = decoded;
+
+        // Double-Lock: Check database status on every request to ensure verification hasn't been bypassed
+        const userRepository = require('../repositories/userRepository');
+        const user = await userRepository.findById(decoded.sub);
+        
+        if (!user || user.is_verified !== true) {
+            return res.status(403).json({
+                success: false,
+                message: 'Account not verified. Please verify your email.'
+            });
+        }
 
         next();
     } catch (err) {

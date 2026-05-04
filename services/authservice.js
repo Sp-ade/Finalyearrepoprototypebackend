@@ -8,7 +8,9 @@ exports.login = async (email, password) => {
 
   if (!user) throw new Error('Invalid credentials')
 
-  if (!user.is_verified) {
+  console.log(`[AUTH DEBUG] User ${email} is_verified:`, user.is_verified, `(Type: ${typeof user.is_verified})`);
+
+  if (user.is_verified !== true) {
     const error = new Error('Please verify your email before logging in')
     error.statusCode = 403
     throw error

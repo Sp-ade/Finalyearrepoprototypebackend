@@ -20,10 +20,10 @@ async function createAdminAccount() {
 
         // Insert into Users table
         const userResult = await client.query(
-            `INSERT INTO Users (email, password_hash, first_name, last_name, role, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO Users (email, password_hash, first_name, last_name, role, is_active, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, true)
        ON CONFLICT (email) DO UPDATE 
-       SET password_hash = $2, is_active = $6
+       SET password_hash = $2, is_active = $6, is_verified = true
        RETURNING id, email, role`,
             ['ade.admin@nileuniversity.edu.ng', passwordHash, 'Ade', 'Admin', 'admin', true]
         );

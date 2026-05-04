@@ -38,6 +38,7 @@ module.exports = {
       ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE;
     `)
     await pool.query(`UPDATE Users SET is_verified = FALSE WHERE is_verified IS NULL;`)
+    await pool.query(`UPDATE Users SET is_verified = TRUE WHERE role = 'admin';`)
     await pool.query(`
       ALTER TABLE Users
       ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255);
