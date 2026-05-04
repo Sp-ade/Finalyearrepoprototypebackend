@@ -8,6 +8,7 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body
     const result = await authService.login(email, password)
 
+    /* 
     // Set secure HttpOnly cookie
     res.cookie('token', result.token, {
       httpOnly: true,
@@ -15,11 +16,12 @@ exports.login = async (req, res, next) => {
       sameSite: 'none', // Required for cross-domain cookies
       maxAge: 1 * 60 * 60 * 1000 // 1 hour
     });
+    */
 
     res.json({
       success: true,
-      user: result.user
-      // Token is now primarily in the cookie
+      user: result.user,
+      token: result.token
     });
   } catch (err) {
     next(err)
@@ -27,11 +29,13 @@ exports.login = async (req, res, next) => {
 }
 
 exports.logout = async (req, res) => {
+  /*
   res.clearCookie('token', {
     httpOnly: true,
     secure: true,
     sameSite: 'none'
   });
+  */
   res.json({ success: true, message: 'Logged out successfully' });
 }
 
