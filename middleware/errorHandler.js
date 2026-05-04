@@ -11,6 +11,6 @@ module.exports = function errorHandler(err, req, res, next) {
     })
   }
 
-  const status = err.status || (err.name === 'UnauthorizedError' ? 401 : 500)
+  const status = err.statusCode || err.status || (err.name === 'UnauthorizedError' ? 401 : 500)
   res.status(status).json({ message: err.message || 'Internal Server Error' })
 }

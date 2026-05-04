@@ -10,6 +10,7 @@ router.post('/login', loginRateLimiter, controller.login)
 router.post('/logout', authenticate, controller.logout)
 router.get('/me', authenticate, controller.getUserByEmail)
 router.get('/verify-email', controller.verifyEmail)
+router.post('/resend-verification', controller.resendVerification)
 // testing helper: immediately mark an email verified and add any missing columns
 router.post('/force-verify', authenticate, isAdmin, controller.forceVerify)
 // send a simple test email to given address

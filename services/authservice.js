@@ -8,8 +8,10 @@ exports.login = async (email, password) => {
 
   if (!user) throw new Error('Invalid credentials')
 
-  if (user.is_verified === false) {
-    throw new Error('Please verify your email before logging in')
+  if (!user.is_verified) {
+    const error = new Error('Please verify your email before logging in')
+    error.statusCode = 403
+    throw error
   }
 
   const ok = await bcrypt.compare(password, user.password_hash)
@@ -254,5 +256,34 @@ exports.signup = async ({ email, password, firstName, lastName, role, studentId,
     lastName: user.last_name,
     role: user.role
   }
+}
+
+exports.resendVerification = async (email) => {
+  const user = await userRepo.findByEmail(email)
+  
+  if (!user) {
+    const error = new Error('No account found with that email address')
+    error.statusCode = 404
+    throw error
+  }
+
+  if (user.is_verified) {
+    const error = new Error('This account is already verified')
+    error.statusCode = 400
+    throw error
+  }
+
+  // Generate new token (1 hour expiry)
+  const verificationToken = jwt.sign({ email }, { expiresIn: '1h' })
+  const verificationExpiry = new Date(Date.now() + 60 * 60 * 1000)
+
+  // Update in database
+  await userRepo.updateVerificationToken(email, verificationToken, verificationExpiry)
+
+  // Send email
+  const { sendVerificationEmail } = require('../services/emailService')
+  await sendVerificationEmail(email, verificationToken)
+
+  return { message: 'Verification email resent successfully' }
 }
 

@@ -64,7 +64,7 @@ exports.verificationSuccess = `
         </div>
         <h1>Account Verified!</h1>
         <p>Your email has been successfully verified. You can now access all features of the Nile University Repository.</p>
-        <a href="${FRONTEND_URL}/login" class="btn">Continue to Login</a>
+        <a href="${FRONTEND_URL}" class="btn">Continue to Login</a>
         <div class="footer">Nile University Repository</div>
     </div>
 </body>

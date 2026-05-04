@@ -90,6 +90,12 @@ module.exports = {
   findById: async (id) => {
     const result = await db.query('SELECT * FROM Users WHERE id = $1', [id])
     return result.rows[0] || null
+  },
+  updateVerificationToken: async (email, token, expiry) => {
+    await db.query(
+      'UPDATE Users SET verification_token = $1, verification_expires = $2 WHERE email = $3',
+      [token, expiry, email]
+    )
   }
 }
 

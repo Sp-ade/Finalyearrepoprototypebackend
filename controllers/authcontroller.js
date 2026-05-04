@@ -139,3 +139,16 @@ exports.handleResetPassword = async (req, res, next) => {
     return res.status(400).send(templates.resetPasswordFailed(err.message));
   }
 }
+
+exports.resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+    const result = await authService.resendVerification(email);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
