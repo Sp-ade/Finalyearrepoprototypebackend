@@ -66,9 +66,9 @@ const startServer = async () => {
             console.log('✅ Database dropped and Cloudinary cleared');
         }
 
-        const initializeDatabase = require('./initialize-database');
+        const initializeDatabase = require('./scripts/initialize-database');
         await initializeDatabase();
-        const createAdmin = require('./create-admin');
+        const createAdmin = require('./scripts/create-admin');
         await createAdmin();
 
         // One-time migration for leader assign link between students and supervisors
