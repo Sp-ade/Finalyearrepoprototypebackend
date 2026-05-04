@@ -86,6 +86,10 @@ module.exports = {
       'UPDATE Users SET reset_token = NULL, reset_expires = NULL WHERE id = $1',
       [userId]
     )
+  },
+  findById: async (id) => {
+    const result = await db.query('SELECT * FROM Users WHERE id = $1', [id])
+    return result.rows[0] || null
   }
 }
 

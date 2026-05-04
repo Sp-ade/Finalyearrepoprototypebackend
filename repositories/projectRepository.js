@@ -397,6 +397,41 @@ class ProjectRepository {
         // Return the full project with joined supervisor name, tags, etc.
         return await this.getProjectById(projectId);
     }
+    /**
+     * Get all unique tag names
+     */
+    async getAllTags() {
+        const query = 'SELECT name FROM Tags ORDER BY name ASC';
+        const result = await db.query(query);
+        return result.rows.map(row => row.name);
+    }
+
+    /**
+     * Find a submission by project and student
+     */
+    async getSubmissionByProjectAndStudent(projectId, studentId) {
+        const query = 'SELECT submission_id, status FROM Project_Submissions WHERE project_id = $1 AND student_id = $2';
+        const result = await db.query(query, [projectId, studentId]);
+        return result.rows[0];
+    }
+
+    /**
+     * Check if a student has an approved edit request for a project
+     */
+    async checkApprovedEditRequest(projectId, studentId) {
+        const query = "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'";
+        const result = await db.query(query, [projectId, studentId]);
+        return result.rows.length > 0;
+    }
+
+    /**
+     * Check if a student has an active submission that can be edited
+     */
+    async hasEditableSubmission(projectId, studentId) {
+        const query = "SELECT 1 FROM Project_Submissions WHERE project_id = $1 AND student_id = $2 AND status IN ('Pending', 'Changes Requested')";
+        const result = await db.query(query, [projectId, studentId]);
+        return result.rows.length > 0;
+    }
 }
 
 module.exports = new ProjectRepository();

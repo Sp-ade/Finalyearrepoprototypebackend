@@ -3,7 +3,7 @@ const createProjectTables = require('./create-project-tables');
 const createRequestTables = require('./create-request-tables');
 const createSubmissionTable = require('./create-submission-table');
 const seedTags = require('./scripts/seed-tags');
-
+//LOGGER for database items
 async function initializeDatabase() {
     try {
         console.log('🚀 Starting database initialization...\n');

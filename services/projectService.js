@@ -127,6 +127,94 @@ class ProjectService {
     }
 
     /**
+     * Get a single project by ID with detailed access information
+     */
+    async getProjectWithAccess(projectId, user) {
+        try {
+            const projectResult = await this.getProjectById(projectId);
+            if (!projectResult.success) {
+                return projectResult;
+            }
+
+            const project = projectResult.project;
+            const studentId = user?.sub;
+            
+            let hasAccess = false;
+            let isSubmitter = false;
+            let editRequestApproved = false;
+            let hasRejectedRequest = false;
+            let submissionId = null;
+
+            // 1. Admin Access
+            if (user?.role === 'admin') {
+                hasAccess = true;
+            }
+
+            // 2. Student Access
+            if (studentId && user.role === 'student' && !hasAccess) {
+                // Check if student is the submitter
+                const submission = await projectRepository.getSubmissionByProjectAndStudent(projectId, studentId);
+                if (submission) {
+                    hasAccess = true;
+                    isSubmitter = true;
+                    submissionId = submission.submission_id;
+
+                    // Check for approved edit request
+                    editRequestApproved = await projectRepository.checkApprovedEditRequest(projectId, studentId);
+                } else {
+                    // Check if student is a participant
+                    const dbUser = await require('../repositories/userRepository').findById(studentId);
+                    if (dbUser) {
+                        const fullName = `${dbUser.first_name} ${dbUser.last_name}`.toLowerCase();
+                        const participants = project.Studentnames || [];
+                        if (participants.some(name => name.toLowerCase() === fullName)) {
+                            hasAccess = true;
+                        }
+                    }
+                }
+
+                // 3. Fallback to manual access request
+                if (!hasAccess) {
+                    hasAccess = await require('../repositories/requestRepository').checkAccess(studentId, projectId);
+                }
+
+                // 4. Check for rejected requests
+                hasRejectedRequest = await require('../repositories/requestRepository').haveRejectedRequest(studentId, projectId);
+            }
+
+            // 5. Supervisor Access
+            const isSupervisor = user ? (project.supervisor_id === user.sub || String(project.supervisor_id) === String(user.sub)) : false;
+            
+            let supervisorEditApproved = false;
+            if (isSupervisor) {
+                supervisorEditApproved = await require('./staffPermissionService').hasApprovedPermission(user.sub, projectId);
+            }
+
+            // Admin always has edit access
+            if (user?.role === 'admin') {
+                supervisorEditApproved = true;
+            }
+
+            return {
+                success: true,
+                project: {
+                    ...project,
+                    hasAccess,
+                    isSupervisor,
+                    isSubmitter,
+                    editRequestApproved,
+                    hasRejectedRequest,
+                    supervisorEditApproved,
+                    submissionId
+                }
+            };
+        } catch (error) {
+            console.error('Error in getProjectWithAccess:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Update a project
      */
     async updateProject(projectId, projectData) {

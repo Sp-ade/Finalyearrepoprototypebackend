@@ -8,7 +8,7 @@ exports.login = async (email, password) => {
 
   if (!user) throw new Error('Invalid credentials')
 
-  if (!user.is_verified) {
+  if (user.is_verified === false) {
     throw new Error('Please verify your email before logging in')
   }
 
@@ -60,7 +60,7 @@ exports.getUserByEmail = async (email) => {
 
 exports.verifyEmail = async (token, decodedEmail) => {
   const user = await userRepo.findByEmail(decodedEmail)
-  
+
   if (!user) {
     const error = new Error('User not found')
     error.statusCode = 404
@@ -149,7 +149,7 @@ exports.resetPassword = async (token, newPassword) => {
     }
 
     const user = await userRepo.findByResetToken(token)
-    
+
     if (!user) {
       const error = new Error('Invalid or expired reset token')
       error.statusCode = 400
@@ -165,7 +165,7 @@ exports.resetPassword = async (token, newPassword) => {
 
     const saltRounds = 10
     const passwordHash = await bcrypt.hash(newPassword, saltRounds)
-    
+
     await userRepo.updatePasswordHash(user.id, passwordHash)
     await userRepo.clearResetToken(user.id)
 

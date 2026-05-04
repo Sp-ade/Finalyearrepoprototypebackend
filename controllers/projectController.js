@@ -2,6 +2,7 @@ const projectService = require('../services/projectService');
 const staffPermissionService = require('../services/staffPermissionService');
 const requestService = require('../services/requestService');
 const activityService = require('../services/activityService');
+const projectRepository = require('../repositories/projectRepository');
 
 /**
  * Create a new project
@@ -54,18 +55,15 @@ const getAllProjects = async (req, res) => {
     }
 };
 
-const requestRepository = require('../repositories/requestRepository');
-const db = require('../Database');
-
 /**
  * Get all tags
  */
 const getAllTags = async (req, res) => {
     try {
-        const result = await db.query('SELECT name FROM Tags ORDER BY name ASC');
+        const tags = await projectRepository.getAllTags();
         res.status(200).json({
             success: true,
-            tags: result.rows.map(row => row.name)
+            tags
         });
     } catch (error) {
         console.error('Error fetching tags:', error);
@@ -78,15 +76,12 @@ const getAllTags = async (req, res) => {
 };
 
 /**
- * Get a single project by ID
+ * Get a single project by ID with access control
  */
 const getProjectById = async (req, res) => {
     try {
         const { id } = req.params;
-        // IDOR Fix: Use student ID from JWT sub instead of query params
-        const studentId = req.user?.sub;
-
-        const result = await projectService.getProjectById(parseInt(id));
+        const result = await projectService.getProjectWithAccess(parseInt(id), req.user);
 
         if (!result.success) {
             return res.status(404).json({
@@ -94,85 +89,7 @@ const getProjectById = async (req, res) => {
             });
         }
 
-        const project = result.project;
-        let hasAccess = false;
-        let isSubmitter = false;
-        let editRequestApproved = false;
-        let hasRejectedRequest = false;
-        let submissionId = null;
-
-        // Automatically grant access to admins
-        if (req.user?.role === 'admin') {
-            hasAccess = true;
-        }
-
-        // If studentId is provided, check access
-        if (studentId && !hasAccess) {
-            // 1. Check if student is the submitter
-            const submissionRes = await db.query(
-                'SELECT submission_id FROM Project_Submissions WHERE project_id = $1 AND student_id = $2',
-                [id, studentId]
-            );
-
-            if (submissionRes.rows.length > 0) {
-                hasAccess = true;
-                isSubmitter = true;
-                submissionId = submissionRes.rows[0].submission_id;
-
-                // Check for approved edit request if they are the submitter
-                const editRequestRes = await db.query(
-                    "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'",
-                    [id, studentId]
-                );
-                if (editRequestRes.rows.length > 0) {
-                    editRequestApproved = true;
-                }
-            } else {
-                // 2. Check if student is a participant (name match in Studentsnames)
-                const userRes = await db.query('SELECT first_name, last_name FROM Users WHERE id = $1', [studentId]);
-                if (userRes.rows.length > 0) {
-                    const fullName = `${userRes.rows[0].first_name} ${userRes.rows[0].last_name}`.toLowerCase();
-                    const participants = project.Studentnames || [];
-                    if (participants.some(name => name.toLowerCase() === fullName)) {
-                        hasAccess = true;
-                    }
-                }
-            }
-
-            // 3. Fallback to existing manual access request check
-            if (!hasAccess) {
-                hasAccess = await requestRepository.checkAccess(studentId, parseInt(id));
-            }
-
-            // 4. Check for rejected requests
-            hasRejectedRequest = await requestRepository.haveRejectedRequest(studentId, parseInt(id));
-        }
-
-        const isSupervisor = req.user ? (project.supervisor_id === req.user.sub || String(project.supervisor_id) === String(req.user.sub)) : false;
-
-        // Check if supervisor has an approved Staff_Permission to edit this project
-        let supervisorEditApproved = false;
-        if (isSupervisor) {
-            supervisorEditApproved = await staffPermissionService.hasApprovedPermission(req.user.sub, parseInt(id));
-        }
-
-        // Admin always has edit access
-        if (req.user?.role === 'admin') {
-            supervisorEditApproved = true;
-        }
-
-        const responseData = {
-            ...project,
-            hasAccess,
-            isSupervisor,
-            isSubmitter,
-            editRequestApproved,
-            hasRejectedRequest,
-            supervisorEditApproved,
-            submissionId
-        };
-
-        res.status(200).json(responseData);
+        res.status(200).json(result.project);
     } catch (error) {
         console.error('Error fetching project:', error);
         res.status(500).json({
@@ -189,19 +106,21 @@ const getProjectById = async (req, res) => {
 const updateProject = async (req, res) => {
     try {
         const { id } = req.params;
+        const projectId = parseInt(id);
 
-        // IDOR Fix: Verify ownership/admin before update
-        const projectRes = await projectService.getProjectById(parseInt(id));
+        // 1. Ownership/Permission check
+        const projectRes = await projectService.getProjectById(projectId);
         if (!projectRes.success) {
             return res.status(404).json({ message: 'Project not found' });
         }
 
-        const isOwner = projectRes.project.supervisor_id && req.user?.sub && String(projectRes.project.supervisor_id) === String(req.user.sub);
+        const project = projectRes.project;
+        const isOwner = project.supervisor_id && req.user?.sub && String(project.supervisor_id) === String(req.user.sub);
 
         if (req.user?.role !== 'admin') {
             if (isOwner) {
                 // Supervisor owns the project — must also have an Approved Staff_Permission
-                const hasPermission = await staffPermissionService.hasApprovedPermission(req.user.sub, parseInt(id));
+                const hasPermission = await staffPermissionService.hasApprovedPermission(req.user.sub, projectId);
                 if (!hasPermission) {
                     return res.status(403).json({
                         success: false,
@@ -215,38 +134,28 @@ const updateProject = async (req, res) => {
                     return res.status(401).json({ message: 'Authentication required' });
                 }
 
-                const editRequestRes = await db.query(
-                    "SELECT 1 FROM Access_Requests_Student WHERE project_id = $1 AND student_id = $2 AND mode = 'edit' AND status = 'Approved'",
-                    [id, studentId]
-                );
+                const editRequestApproved = await projectRepository.checkApprovedEditRequest(projectId, studentId);
+                const hasEditableSubmission = await projectRepository.hasEditableSubmission(projectId, studentId);
 
-                // Allow update if they are the submitter and status is 'Pending' or 'Changes Requested'
-                const submissionCheck = await db.query(
-                    "SELECT 1 FROM Project_Submissions WHERE project_id = $1 AND student_id = $2 AND status IN ('Pending', 'Changes Requested')",
-                    [id, studentId]
-                );
-
-                if (editRequestRes.rows.length === 0 && submissionCheck.rows.length === 0) {
+                if (!editRequestApproved && !hasEditableSubmission) {
                     return res.status(403).json({ message: 'Unauthorized to update this project' });
                 }
             }
         }
 
-        const result = await projectService.updateProject(parseInt(id), req.body);
+        // 2. Perform Update
+        const result = await projectService.updateProject(projectId, req.body);
 
-        // Security: Reset staff permission after successful update for supervisors
+        // 3. Security: Reset permissions after successful update
         if (req.user?.role === 'supervisor') {
-            await staffPermissionService.resetPermission(req.user.sub, parseInt(id), 'edit');
+            await staffPermissionService.resetPermission(req.user.sub, projectId, 'edit');
+        } else if (req.user?.role === 'student' && result.project) {
+            await requestService.resetRequest(req.user.sub, projectId, 'edit');
         }
 
-        // Security: Reset student permission after successful update for student leaders
-        if (req.user?.role === 'student' && result.project) {
-            await requestService.resetRequest(req.user.sub, parseInt(id), 'edit');
-        }
-
-        // Audit Logging
+        // 4. Audit Logging
         if (result.project) {
-            await activityService.logProjectUpdated(parseInt(id), req.user.sub);
+            await activityService.logProjectUpdated(projectId, req.user.sub);
         }
 
         res.status(200).json({
@@ -268,9 +177,10 @@ const updateProject = async (req, res) => {
 const deleteProject = async (req, res) => {
     try {
         const { id } = req.params;
+        const projectId = parseInt(id);
 
-        // IDOR Fix: Verify ownership/admin before delete
-        const projectRes = await projectService.getProjectById(parseInt(id));
+        // Verify ownership/admin before delete
+        const projectRes = await projectService.getProjectById(projectId);
         if (!projectRes.success) {
             return res.status(404).json({ message: 'Project not found' });
         }
@@ -281,7 +191,7 @@ const deleteProject = async (req, res) => {
             return res.status(403).json({ message: 'Unauthorized to delete this project' });
         }
 
-        const result = await projectService.deleteProject(parseInt(id));
+        const result = await projectService.deleteProject(projectId);
 
         res.status(200).json({
             success: true,
@@ -304,6 +214,7 @@ const reassignSupervisor = async (req, res) => {
     try {
         const { id } = req.params;
         const { newSupervisorId } = req.body;
+        const projectId = parseInt(id);
 
         if (!newSupervisorId) {
             return res.status(400).json({ message: 'New supervisor ID is required' });
@@ -314,7 +225,7 @@ const reassignSupervisor = async (req, res) => {
             return res.status(403).json({ message: 'Only administrators can reassign supervisors' });
         }
 
-        const result = await projectService.reassignSupervisor(parseInt(id), parseInt(newSupervisorId));
+        const result = await projectService.reassignSupervisor(projectId, parseInt(newSupervisorId));
 
         if (!result.success) {
             return res.status(404).json({ message: result.message });
@@ -322,7 +233,7 @@ const reassignSupervisor = async (req, res) => {
 
         // Audit Logging
         if (result.project) {
-            await activityService.logSupervisorReassigned(parseInt(id), req.user.sub, "Previous Supervisor", result.project.supervisor_name);
+            await activityService.logSupervisorReassigned(projectId, req.user.sub, "Previous Supervisor", result.project.supervisor_name);
         }
 
         res.status(200).json({
