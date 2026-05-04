@@ -30,6 +30,11 @@ class ProjectService {
                 status
             } = projectData;
 
+            // Validate number of students (max 6)
+            if (Studentnames && Studentnames.length > 6) {
+                return { success: false, message: 'A project can have a maximum of 6 participants' };
+            }
+
             // Create the project
             const project = await projectRepository.createProject({
                 name: name || title,
@@ -233,6 +238,11 @@ class ProjectService {
                 StudentIDs,
                 Tags
             } = projectData;
+
+            // Validate number of students (max 6)
+            if (Studentnames && Studentnames.length > 6) {
+                return { success: false, message: 'A project can have a maximum of 6 participants' };
+            }
 
             // Update the project
             const updatedProject = await projectRepository.updateProject(projectId, {
