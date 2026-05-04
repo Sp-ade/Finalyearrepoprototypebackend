@@ -48,20 +48,30 @@ const storageConfigs = {
     profilePictures: createCloudinaryStorage('profile_pictures', ['jpg', 'jpeg', 'png', 'gif', 'webp'], [{ quality: 'auto' }], 'auto'),
 
     // For documents (PDFs, Word docs, etc.) - RAW files with extension preservation
-    documents: createCloudinaryStorage(process.env.CLOUDINARY_DOCS_FOLDER || 'documents', ['pdf', 'doc', 'docx', 'txt'], [], 'raw'),
+    documents: createCloudinaryStorage(process.env.CLOUDINARY_DOCS_FOLDER || 'documents', ['pdf'], [], 'raw'),
 
     // For project artifacts - RAW files with extension preservation
-    projectArtifacts: createCloudinaryStorage(process.env.CLOUDINARY_PROJECT_FOLDER, ['pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 'zip'], [], 'raw'),
+    projectArtifacts: createCloudinaryStorage(process.env.CLOUDINARY_PROJECT_FOLDER, ['pdf'], [], 'raw'),
 
     // For general files - Auto
-    general: createCloudinaryStorage('uploads', ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'], [], 'auto')
+    general: createCloudinaryStorage('uploads', ['jpg', 'jpeg', 'png', 'gif', 'pdf'], [], 'auto')
 };
 
 // Multer upload instances
 const uploads = {
     profilePicture: multer({ storage: storageConfigs.profilePictures, limits: { fileSize: FILE_SIZE_LIMIT } }),
     document: multer({ storage: storageConfigs.documents, limits: { fileSize: FILE_SIZE_LIMIT } }),
-    projectArtifact: multer({ storage: storageConfigs.projectArtifacts, limits: { fileSize: FILE_SIZE_LIMIT } }),
+    projectArtifact: multer({
+        storage: storageConfigs.projectArtifacts,
+        limits: { fileSize: FILE_SIZE_LIMIT },
+        fileFilter: (req, file, cb) => {
+            if (file.mimetype === 'application/pdf') {
+                cb(null, true);
+            } else {
+                cb(new Error('Only PDF files are allowed for project artifacts'), false);
+            }
+        }
+    }),
     general: multer({ storage: storageConfigs.general, limits: { fileSize: FILE_SIZE_LIMIT } })
 };
 

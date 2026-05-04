@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
@@ -33,7 +33,7 @@ const getToolPath = (toolName) => {
     if (process.platform === 'win32') {
         const defaultWinPath = `C:\\Program Files\\PostgreSQL\\18\\bin\\${toolName}.exe`;
         if (fs.existsSync(defaultWinPath)) {
-            return `"${defaultWinPath}"`;
+            return defaultWinPath;
         }
     }
     
@@ -60,13 +60,27 @@ const createBackup = () => {
             return reject(new Error('DATABASE_URL is not defined in .env'));
         }
 
-        const command = `${pgDump} --dbname="${dbUrl}" --file="${filepath}" --clean --if-exists --no-owner --no-privileges`;
+        const args = [
+            `--dbname=${dbUrl}`,
+            `--file=${filepath}`,
+            '--clean',
+            '--if-exists',
+            '--no-owner',
+            '--no-privileges'
+        ];
 
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Backup error: ${error.message}`);
+        const child = spawn(pgDump, args, { shell: false });
+        let stderr = '';
+
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        child.on('close', (code) => {
+            if (code !== 0) {
+                console.error(`Backup error: Process exited with code ${code}`);
                 console.error(`Stderr: ${stderr}`);
-                return reject(new Error(`Database dump failed: ${stderr || error.message}`));
+                return reject(new Error(`Database dump failed: ${stderr || 'Process exited with error'}`));
             }
             
             try {
@@ -112,7 +126,9 @@ const listBackups = () => {
  */
 const restoreBackup = (filename) => {
     return new Promise((resolve, reject) => {
-        const filepath = path.join(BACKUP_DIR, filename);
+        // Sanitize filename to prevent path traversal
+        const safeFilename = path.basename(filename);
+        const filepath = path.join(BACKUP_DIR, safeFilename);
         
         if (!fs.existsSync(filepath)) {
             return reject(new Error('Backup file not found'));
@@ -125,13 +141,23 @@ const restoreBackup = (filename) => {
             return reject(new Error('DATABASE_URL is not defined in .env'));
         }
 
-        const command = `${psql} --dbname="${dbUrl}" --file="${filepath}"`;
+        const args = [
+            `--dbname=${dbUrl}`,
+            `--file=${filepath}`
+        ];
 
-        exec(command, async (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Restore error: ${error.message}`);
+        const child = spawn(psql, args, { shell: false });
+        let stderr = '';
+
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        child.on('close', async (code) => {
+            if (code !== 0) {
+                console.error(`Restore error: Process exited with code ${code}`);
                 console.error(`Stderr: ${stderr}`);
-                return reject(new Error(`Restore failed: ${stderr || error.message}`));
+                return reject(new Error(`Restore failed: ${stderr || 'Process exited with error'}`));
             }
 
             try {
@@ -174,7 +200,8 @@ const resetSequences = async () => {
  * Delete a backup file
  */
 const deleteBackup = (filename) => {
-    const filepath = path.join(BACKUP_DIR, filename);
+    const safeFilename = path.basename(filename);
+    const filepath = path.join(BACKUP_DIR, safeFilename);
     if (fs.existsSync(filepath)) {
         fs.unlinkSync(filepath);
         return { success: true };
