@@ -16,7 +16,7 @@ async function initializeDatabase() {
         // Step 2: Create project tables
         console.log('Step 2: Creating project tables...');
         await createProjectTables();
-        const createProjectMembersTable = require('./scripts/create-project-members-table');
+        const createProjectMembersTable = require('./create-project-members-table');
         await createProjectMembersTable();
         console.log('✓ Project tables and members created\n');
 
@@ -39,7 +39,7 @@ async function initializeDatabase() {
 
         // Step 6: Create activity logs table
         console.log('Step 6: Creating activity logs table...');
-        const createActivityLogsTable = require('./scripts/create-activity-logs-table');
+        const createActivityLogsTable = require('./create-activity-logs-table');
         await createActivityLogsTable();
         console.log('✓ Activity logs table created\n');
 

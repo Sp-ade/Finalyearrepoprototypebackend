@@ -68,7 +68,7 @@ const startServer = async () => {
 
         const initializeDatabase = require('./scripts/initialize-database');
         await initializeDatabase();
-        const createAdmin = require('./scripts/create-admin');
+        const createAdmin = require('./scripts/createAdmin');
         await createAdmin();
 
         // One-time migration for leader assign link between students and supervisors
