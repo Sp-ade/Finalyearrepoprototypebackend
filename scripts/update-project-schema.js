@@ -1,4 +1,4 @@
-const db = require('./Database');
+const db = require('../Database');
 
 async function updateProjectSchema() {
     try {

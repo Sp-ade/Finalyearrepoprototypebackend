@@ -1,5 +1,8 @@
 const projectRepository = require('../repositories/projectRepository');
 const artifactRepository = require('../repositories/artifactRepository');
+const userRepository = require('../repositories/userRepository');
+const requestRepository = require('../repositories/requestRepository');
+const staffPermissionService = require('./staffPermissionService');
 // Import cloudinary utils at the top level
 const { deleteFile } = require('../utils/cloudinary');
 
@@ -163,7 +166,7 @@ class ProjectService {
                     editRequestApproved = await projectRepository.checkApprovedEditRequest(projectId, studentId);
                 } else {
                     // Check if student is a participant
-                    const dbUser = await require('../repositories/userRepository').findById(studentId);
+                    const dbUser = await userRepository.findById(studentId);
                     if (dbUser) {
                         const fullName = `${dbUser.first_name} ${dbUser.last_name}`.toLowerCase();
                         const participants = project.Studentnames || [];
@@ -175,11 +178,11 @@ class ProjectService {
 
                 // 3. Fallback to manual access request
                 if (!hasAccess) {
-                    hasAccess = await require('../repositories/requestRepository').checkAccess(studentId, projectId);
+                    hasAccess = await requestRepository.checkAccess(studentId, projectId);
                 }
 
                 // 4. Check for rejected requests
-                hasRejectedRequest = await require('../repositories/requestRepository').haveRejectedRequest(studentId, projectId);
+                hasRejectedRequest = await requestRepository.haveRejectedRequest(studentId, projectId);
             }
 
             // 5. Supervisor Access
@@ -187,7 +190,7 @@ class ProjectService {
             
             let supervisorEditApproved = false;
             if (isSupervisor) {
-                supervisorEditApproved = await require('./staffPermissionService').hasApprovedPermission(user.sub, projectId);
+                supervisorEditApproved = await staffPermissionService.hasApprovedPermission(user.sub, projectId);
             }
 
             // Admin always has edit access

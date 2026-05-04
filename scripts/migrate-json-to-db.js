@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
-const db = require('./Database');
-const projectService = require('./services/projectService');
+const db = require('../Database');
+const projectService = require('../services/projectService');
 
 async function migrateJsonToDb() {
     try {

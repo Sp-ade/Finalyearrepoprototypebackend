@@ -1,8 +1,8 @@
-const db = require('./Database');
+const db = require('../Database');
 const createProjectTables = require('./create-project-tables');
 const createRequestTables = require('./create-request-tables');
 const createSubmissionTable = require('./create-submission-table');
-const seedTags = require('./scripts/seed-tags');
+const seedTags = require('./seed-tags');
 //LOGGER for database items
 async function initializeDatabase() {
     try {
