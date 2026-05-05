@@ -16,9 +16,11 @@ const dropTables = require('./scripts/drop-tables')
 const PORT = process.env.PORT || 3000
 const app = express()
 const cookieParser = require('cookie-parser')
-// const helmet = require('helmet') // Disabled: causes immediate logout on Render due to cookie/session interference
+const helmet = require('helmet')
 app.set('trust proxy', 1);
-// app.use(helmet()) // Disabled: causes immediate logout on Render due to cookie/session interference
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}))
 app.use(express.json())
 app.use(cookieParser())
 app.use(cors({
