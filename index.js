@@ -32,12 +32,12 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             // Images: allow our own + data URIs (for MUI icons) + Cloudinary
             imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-            // API connections: allow our own backend + local dev
+            // API connections: allow our own backend + frontend + local dev
             connectSrc: [
                 "'self'",
-                "https://finalyearrepoprototypebackend.onrender.com",
-                "http://localhost:3000"
-            ],
+                process.env.BACKEND_URL,
+                process.env.FRONTEND_URL
+            ].filter(Boolean),
             // Block all iframes (prevents Clickjacking)
             frameSrc: ["'none'"],
             // Block Flash/plugins
