@@ -1,6 +1,7 @@
 const adminService = require('../services/adminService');
 const activityService = require('../services/activityService');
 const backupService = require('../services/backupService');
+const authService = require('../services/authservice');
 const fs = require('fs');
 const path = require('path');
 
@@ -441,9 +442,20 @@ const createBackup = async (req, res) => {
  */
 const restoreBackup = async (req, res) => {
     try {
-        const { filename } = req.body;
+        const { filename, password } = req.body;
         if (!filename) {
             return res.status(400).json({ success: false, message: 'Filename is required' });
+        }
+
+        if (!password) {
+            return res.status(400).json({ success: false, message: 'Admin password is required for database restoration' });
+        }
+
+        // Verify password
+        try {
+            await authService.verifyPassword(req.user.email, password);
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Invalid admin password' });
         }
 
         const result = await backupService.restoreBackup(filename);

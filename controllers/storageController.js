@@ -1,12 +1,26 @@
 const { cloudinary } = require('../utils/cloudinary');
 const db = require('../Database');
 const activityService = require('../services/activityService');
+const authService = require('../services/authservice');
 
 /**
  * Identify and delete unreferenced files from Cloudinary
  */
 const cleanupCloudinary = async (req, res) => {
     try {
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({ success: false, message: 'Admin password is required for storage cleanup' });
+        }
+
+        // Verify password
+        try {
+            await authService.verifyPassword(req.user.email, password);
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Invalid admin password' });
+        }
+
         console.log('🚀 Starting Cloudinary storage cleanup...');
 
         // 1. Get folders to clean from environment variables

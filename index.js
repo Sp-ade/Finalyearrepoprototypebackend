@@ -12,6 +12,7 @@ const supervisorRoutes = require('./routes/supervisorRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
 const dropTables = require('./scripts/drop-tables')
+const { generateToken, setCsrfTokenCookie, verifyCsrfToken } = require('./middleware/csrfMiddleware')
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -31,6 +32,16 @@ app.use(cors({
     ],
     credentials: true
 }))
+
+// Apply CSRF Verification globally (skips GET by default)
+app.use(verifyCsrfToken)
+
+// Endpoint to fetch initial CSRF token
+app.get('/api/csrf-token', (req, res) => {
+    const token = generateToken();
+    setCsrfTokenCookie(res, token);
+    res.json({ csrfToken: token });
+});
 
 // Debug: Log all incoming requests
 app.use((req, res, next) => {

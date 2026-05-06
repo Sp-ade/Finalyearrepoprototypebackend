@@ -289,3 +289,20 @@ exports.resendVerification = async (email) => {
   return { message: 'Verification email resent successfully' }
 }
 
+/**
+ * Verify a user's password without logging them in
+ */
+exports.verifyPassword = async (email, password) => {
+  const user = await userRepo.findByEmail(email)
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  const ok = await bcrypt.compare(password, user.password_hash)
+  if (!ok) {
+    throw new Error('Invalid password')
+  }
+  
+  return true
+}
+
