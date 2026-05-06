@@ -11,10 +11,11 @@ const generateToken = () => {
  * Set the CSRF token in a cookie
  */
 const setCsrfTokenCookie = (res, token) => {
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('csrf_token', token, {
         httpOnly: true,
-        secure: true, // Required for SameSite: None on Render
-        sameSite: 'none',
+        secure: isProd,           // HTTP ok on localhost, HTTPS required in production
+        sameSite: isProd ? 'none' : 'lax', // 'none' needed for cross-domain on Render
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 };

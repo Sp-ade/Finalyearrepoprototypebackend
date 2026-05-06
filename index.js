@@ -12,7 +12,6 @@ const supervisorRoutes = require('./routes/supervisorRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
 const dropTables = require('./scripts/drop-tables')
-const { generateToken, setCsrfTokenCookie, verifyCsrfToken } = require('./middleware/csrfMiddleware')
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -20,7 +19,31 @@ const cookieParser = require('cookie-parser')
 const helmet = require('helmet')
 app.set('trust proxy', 1);
 app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+        directives: {
+            // Default: only allow resources from our own domain
+            defaultSrc: ["'self'"],
+            // Scripts: only from our own domain (no inline scripts allowed)
+            scriptSrc: ["'self'"],
+            // Styles: allow our own + Google Fonts + MUI inline styles
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            // Fonts: allow our own + Google Fonts CDN
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            // Images: allow our own + data URIs (for MUI icons) + Cloudinary
+            imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+            // API connections: allow our own backend + local dev
+            connectSrc: [
+                "'self'",
+                "https://finalyearrepoprototypebackend.onrender.com",
+                "http://localhost:3000"
+            ],
+            // Block all iframes (prevents Clickjacking)
+            frameSrc: ["'none'"],
+            // Block Flash/plugins
+            objectSrc: ["'none'"]
+        }
+    }
 }))
 app.use(express.json())
 app.use(cookieParser())
@@ -33,15 +56,6 @@ app.use(cors({
     credentials: true
 }))
 
-// Apply CSRF Verification globally (skips GET by default)
-app.use(verifyCsrfToken)
-
-// Endpoint to fetch initial CSRF token
-app.get('/api/csrf-token', (req, res) => {
-    const token = generateToken();
-    setCsrfTokenCookie(res, token);
-    res.json({ csrfToken: token });
-});
 
 // Debug: Log all incoming requests
 app.use((req, res, next) => {
