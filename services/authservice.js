@@ -2,6 +2,7 @@ const userRepo = require('../repositories/userRepository')
 const bcrypt = require('bcrypt')
 const jwt = require('../utils/jwt')
 const { sendLoginNotification } = require('../services/emailService')
+const { validatePassword } = require('../utils/passwordValidator')
 
 exports.login = async (email, password) => {
   const user = await userRepo.findByEmail(email)
@@ -108,6 +109,14 @@ exports.updatePassword = async (email, currentPassword, newPassword) => {
     throw new Error('Incorrect current password')
   }
 
+  // Validate new password strength
+  const passwordErrors = validatePassword(newPassword)
+  if (passwordErrors.length > 0) {
+    const error = new Error(passwordErrors.join('. '))
+    error.statusCode = 400
+    throw error
+  }
+
   const isSame = await bcrypt.compare(newPassword, user.password_hash)
   if (isSame) {
     throw new Error('New password cannot be the same as current password')
@@ -138,8 +147,10 @@ exports.forgotPassword = async (email) => {
 }
 
 exports.resetPassword = async (token, newPassword) => {
-  if (newPassword.length < 6) {
-    const error = new Error('Password must be at least 6 characters long')
+  // Validate password strength
+  const passwordErrors = validatePassword(newPassword)
+  if (passwordErrors.length > 0) {
+    const error = new Error(passwordErrors.join('. '))
     error.statusCode = 400
     throw error
   }
@@ -222,9 +233,10 @@ exports.signup = async ({ email, password, firstName, lastName, role, studentId,
     throw error
   }
 
-  // Validate password length
-  if (password.length < 6) {
-    const error = new Error('Password must be at least 6 characters long')
+  // Validate password strength
+  const passwordErrors = validatePassword(password)
+  if (passwordErrors.length > 0) {
+    const error = new Error(passwordErrors.join('. '))
     error.statusCode = 400
     throw error
   }
