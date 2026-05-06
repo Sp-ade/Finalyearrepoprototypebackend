@@ -138,6 +138,75 @@ exports.verificationFailed = `
 </html>
 `;
 
+exports.confirmVerificationPage = (token, backendUrl) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Verification | Nile University Repository</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
+        :root {
+            --primary: #2b4593;
+            --primary-hover: #213a76;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top right, #e0e7ff, transparent),
+                        radial-gradient(circle at bottom left, #e0e7ff, transparent),
+                        var(--bg);
+            color: var(--text-main);
+        }
+        .card {
+            background: var(--card-bg); padding: 3rem 2rem; border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            text-align: center; max-width: 440px; width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .icon-wrapper {
+            width: 80px; height: 80px; background: #e0e7ff; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; margin: 0 auto 2rem;
+        }
+        .icon { width: 40px; height: 40px; color: var(--primary); }
+        h1 { font-size: 28px; font-weight: 700; margin: 0 0 1rem; letter-spacing: -0.025em; }
+        p { color: var(--text-muted); line-height: 1.6; margin-bottom: 2.5rem; font-size: 16px; }
+        .btn {
+            display: block; width: 100%; background: var(--primary); color: white; padding: 14px;
+            text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none; cursor: pointer; font-family: 'Outfit', sans-serif;
+        }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(43, 69, 147, 0.2); }
+        .footer { margin-top: 2rem; font-size: 14px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon-wrapper">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <h1>Verify Your Account</h1>
+        <p>Please click the button below to complete your registration and verify your email address.</p>
+        <form action="${backendUrl}/api/verify-email" method="POST">
+            <input type="hidden" name="token" value="${token}">
+            <button type="submit" class="btn">Verify My Account</button>
+        </form>
+        <div class="footer">Nile University Repository</div>
+    </div>
+</body>
+</html>
+`;
+
 exports.resetPasswordForm = (token, backendUrl) => `
 <!DOCTYPE html>
 <html lang="en">

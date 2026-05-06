@@ -54,12 +54,19 @@ exports.getUserByEmail = async (req, res, next) => {
 }
 
 exports.verifyEmail = async (req, res, next) => {
-  const { token } = req.query;
+  const token = req.query.token || req.body.token;
+  const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
 
   if (!token) {
     return res.status(400).send('Verification token is missing.');
   }
 
+  // Handle GET request: Show confirmation page
+  if (req.method === 'GET') {
+    return res.send(templates.confirmVerificationPage(token, BACKEND_URL));
+  }
+
+  // Handle POST request: Perform actual verification
   try {
     const decoded = jwt.verify(token);
     await authService.verifyEmail(token, decoded.email);
