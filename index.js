@@ -103,6 +103,10 @@ const startServer = async () => {
             await migrateLeaderAssignments();
         }
 
+        // Unified Group Migration (Fixes production schema and handles legacy leaders)
+        const runUnifiedMigration = require('./scripts/unified-group-migration');
+        await runUnifiedMigration();
+
         console.log('✅ Database initialized and ready');
 
         app.listen(PORT, () => console.log(`Backend listening at http://localhost:${PORT}`));

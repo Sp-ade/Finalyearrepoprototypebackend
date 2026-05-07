@@ -6,10 +6,6 @@ const db = require('../Database');
  * This script performs two main actions:
  * 1. Schema Update: Ensures Project_Members table has group_number, year, and assigned_by columns.
  * 2. Role Reset: (Gated by LEADER_MIGRATE=true) Resets legacy student roles and clears pre-project groups.
- * 
- * Usage:
- *   node scripts/unified-group-migration.js
- *   LEADER_MIGRATE=true node scripts/unified-group-migration.js
  */
 async function runUnifiedMigration() {
     const isLeaderMigrate = process.env.LEADER_MIGRATE === 'true';
@@ -53,8 +49,6 @@ async function runUnifiedMigration() {
             } catch(e) {}
 
             if (!existingCols.includes('id')) {
-                // If it has project_id and student_id but no id, add it. 
-                // We need to handle cases where project_id might be null later.
                 await db.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS id SERIAL PRIMARY KEY;`);
                 console.log('✓ Added id SERIAL PRIMARY KEY.');
             }
@@ -114,10 +108,15 @@ async function runUnifiedMigration() {
         console.log('\n✅ Unified Migration completed successfully!');
     } catch (err) {
         console.error('\n❌ Migration failed:', err);
-        process.exit(1);
-    } finally {
-        process.exit(0);
+        throw err;
     }
 }
 
-runUnifiedMigration();
+module.exports = runUnifiedMigration;
+
+// Allow running standalone if called directly
+if (require.main === module) {
+    runUnifiedMigration()
+        .then(() => process.exit(0))
+        .catch(() => process.exit(1));
+}
