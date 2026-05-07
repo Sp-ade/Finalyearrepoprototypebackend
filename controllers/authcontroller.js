@@ -160,7 +160,7 @@ exports.handleResetPassword = async (req, res, next) => {
     return res.send(templates.resetPasswordSuccess);
   } catch (err) {
     // FAILURE: Show the error page from template
-    return res.status(400).send(templates.resetPasswordFailed(err.message));
+    return res.status(400).send(templates.resetPasswordFailed(err.message, token));
   }
 }
 

@@ -64,7 +64,7 @@ exports.verificationSuccess = `
         </div>
         <h1>Account Verified!</h1>
         <p>Your email has been successfully verified. You can now access all features of the Nile University Repository.</p>
-        <a href="${FRONTEND_URL}" class="btn">Continue to Login</a>
+        <a href="${FRONTEND_URL}/login" class="btn">Continue to Login</a>
         <div class="footer">Nile University Repository</div>
     </div>
 </body>
@@ -251,6 +251,30 @@ exports.resetPasswordForm = (token, backendUrl) => `
             font-family: 'Outfit', sans-serif;
         }
         input:focus { border-color: var(--primary); }
+        .password-policy {
+            text-align: left;
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .password-policy p {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #475569;
+        }
+        .password-policy ul {
+            margin: 0;
+            padding: 0 0 0 18px;
+            list-style-type: disc;
+        }
+        .password-policy li {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
         .btn {
             display: block; width: 100%; background: var(--primary); color: white; padding: 14px;
             text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px;
@@ -265,13 +289,25 @@ exports.resetPasswordForm = (token, backendUrl) => `
 <body>
     <div class="card">
         <h1>Create New Password</h1>
-        <p>Your new password must be at least 6 characters long.</p>
+        <p>Your new password must be at least 8 characters long.</p>
         <form action="${backendUrl}/api/reset-password" method="POST" onsubmit="return validateForm()">
             <input type="hidden" name="token" value="${token}">
             <div class="form-group">
                 <label for="password">New Password</label>
-                <input type="password" id="password" name="password" required minlength="6" placeholder="Enter new password">
+                <input type="password" id="password" name="password" placeholder="Enter new password" required>
             </div>
+            
+            <div class="password-policy">
+                <p>Your password must meet the following requirements:</p>
+                <ul>
+                    <li>At least 8 characters long</li>
+                    <li>One uppercase letter (A-Z)</li>
+                    <li>One lowercase letter (a-z)</li>
+                    <li>One number (0-9)</li>
+                    <li>One special character (e.g., !@#$%^&*)</li>
+                </ul>
+            </div>
+
             <div class="form-group">
                 <label for="confirmPassword">Confirm Password</label>
                 <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6" placeholder="Confirm new password">
@@ -362,7 +398,16 @@ exports.resetPasswordSuccess = `
 </html>
 `;
 
-exports.resetPasswordFailed = (errorMessage) => `
+exports.resetPasswordFailed = (errorMessage, token) => {
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000';
+    // If the error isn't about the token itself, let them try again at the reset form
+    const isTokenError = errorMessage && (errorMessage.toLowerCase().includes('token') || errorMessage.toLowerCase().includes('expired'));
+
+    const retryUrl = (token && !isTokenError)
+        ? `${BACKEND_URL}/api/render-reset-password?token=${token}`
+        : `${FRONTEND_URL}/forgot-password`;
+
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -422,9 +467,10 @@ exports.resetPasswordFailed = (errorMessage) => `
         </div>
         <h1>Reset Failed</h1>
         <p>${errorMessage || 'The password reset link is invalid or has expired. Please request a new one.'}</p>
-        <a href="${FRONTEND_URL}/forgot-password" class="btn">Try Again</a>
+        <a href="${retryUrl}" class="btn">Try Again</a>
         <div class="footer">Nile University Repository</div>
     </div>
 </body>
 </html>
 `;
+};
