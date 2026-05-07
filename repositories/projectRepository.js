@@ -47,31 +47,43 @@ class ProjectRepository {
             const result = await client.query(query, values);
             const project = result.rows[0];
 
-            // Insert into Project_Members
+            // Link students to the project via Project_Members.
+            // If a pre-project group row already exists for this student, update it.
+            // Otherwise insert a fresh row.
             if (Array.isArray(studentIds) && studentIds.length > 0) {
                 for (let i = 0; i < studentIds.length; i++) {
                     const studentId = parseInt(studentIds[i]);
                     if (isNaN(studentId)) continue;
                     const role = (i === 0) ? 'Leader' : 'Member';
-                    // Try to resolve the studentId (could be a Users.id OR a matric_no)
+
+                    // Resolve the studentId (could be a Users.id OR a matric_no)
                     let resolvedId = studentId;
                     const idCheck = await client.query('SELECT id FROM Users WHERE id = $1', [studentId]);
-                    
                     if (idCheck.rows.length === 0) {
-                        // Not a direct ID, check if it's a matric number
                         const matricCheck = await client.query('SELECT user_id FROM Students WHERE student_matric_no = $1', [studentIds[i]]);
                         if (matricCheck.rows.length > 0) {
                             resolvedId = matricCheck.rows[0].user_id;
                         } else {
-                            console.warn(`⚠️ Student identifier ${studentIds[i]} could not be resolved to a user. Skipping.`);
+                            console.warn(`⚠️ Student identifier ${studentIds[i]} could not be resolved. Skipping.`);
                             continue;
                         }
                     }
 
-                    await client.query(`
-                        INSERT INTO Project_Members (project_id, student_id, role)
-                        VALUES ($1, $2, $3)
-                    `, [project.project_id, resolvedId, role]);
+                    // Try to UPDATE an existing pre-project group row first
+                    const updateRes = await client.query(`
+                        UPDATE Project_Members
+                        SET project_id = $1, role = $2
+                        WHERE student_id = $3 AND project_id IS NULL
+                        RETURNING id
+                    `, [project.project_id, role, resolvedId]);
+
+                    // If no existing group row, insert a new one
+                    if (updateRes.rowCount === 0) {
+                        await client.query(`
+                            INSERT INTO Project_Members (project_id, student_id, role)
+                            VALUES ($1, $2, $3)
+                        `, [project.project_id, resolvedId, role]);
+                    }
                 }
             }
 
@@ -263,35 +275,45 @@ class ProjectRepository {
 
             // Only sync members if studentIds was actually passed in the update
             if (studentIds !== undefined) {
-                // Delete existing members
-                await client.query('DELETE FROM Project_Members WHERE project_id = $1', [projectId]);
-                
-                // Add new members
+                // Delete only project-specific member rows (preserve pre-project group rows)
+                await client.query(
+                    'DELETE FROM Project_Members WHERE project_id = $1',
+                    [projectId]
+                );
+
                 if (Array.isArray(studentIds)) {
                     for (let i = 0; i < studentIds.length; i++) {
                         const studentId = parseInt(studentIds[i]);
                         if (isNaN(studentId)) continue;
                         const role = (i === 0) ? 'Leader' : 'Member';
-                        
-                        // Try to resolve the studentId (could be a Users.id OR a matric_no)
+
                         let resolvedId = studentId;
                         const idCheck = await client.query('SELECT id FROM Users WHERE id = $1', [studentId]);
-                        
                         if (idCheck.rows.length === 0) {
-                            // Not a direct ID, check if it's a matric number
                             const matricCheck = await client.query('SELECT user_id FROM Students WHERE student_matric_no = $1', [studentIds[i]]);
                             if (matricCheck.rows.length > 0) {
                                 resolvedId = matricCheck.rows[0].user_id;
                             } else {
-                                console.warn(`⚠️ Student identifier ${studentIds[i]} could not be resolved to a user. Skipping.`);
+                                console.warn(`⚠️ Student identifier ${studentIds[i]} could not be resolved. Skipping.`);
                                 continue;
                             }
                         }
 
-                        await client.query(`
-                            INSERT INTO Project_Members (project_id, student_id, role)
-                            VALUES ($1, $2, $3)
-                        `, [projectId, resolvedId, role]);
+                        // Re-link: try to update existing group row first, then insert
+                        const updateRes = await client.query(`
+                            UPDATE Project_Members
+                            SET project_id = $1, role = $2
+                            WHERE student_id = $3 AND project_id IS NULL
+                            RETURNING id
+                        `, [projectId, role, resolvedId]);
+
+                        if (updateRes.rowCount === 0) {
+                            await client.query(`
+                                INSERT INTO Project_Members (project_id, student_id, role)
+                                VALUES ($1, $2, $3)
+                                ON CONFLICT DO NOTHING
+                            `, [projectId, resolvedId, role]);
+                        }
                     }
                 }
             }

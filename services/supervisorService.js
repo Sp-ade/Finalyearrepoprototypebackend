@@ -9,42 +9,33 @@ class SupervisorService {
     }
 
     /**
-     * Set a student's role to leader
+     * @deprecated — Use formGroup instead. The group dialog now handles all leader assignment.
+     * Kept for backward compatibility with any direct API calls.
      */
     async setStudentLeader(userId, supervisorId) {
-        // Verify the user is actually a student and get full details
         const student = await supervisorRepository.getStudentById(userId);
-        
         if (!student) {
             const error = new Error('Student not found.');
             error.statusCode = 404;
             throw error;
         }
-
-        // 1. Check if already assigned by someone else
         if (student.leader_assigned_by && student.leader_assigned_by !== parseInt(supervisorId)) {
             const error = new Error(`This student is already assigned as a leader by ${student.supervisor_first_name} ${student.supervisor_last_name}.`);
             error.statusCode = 403;
             throw error;
         }
-
-        // 2. Check if the student is already in a project
         const isInProject = await supervisorRepository.checkStudentProjectMembership(userId);
         if (isInProject) {
             const error = new Error('This student is already part of an active project and cannot be assigned as a leader.');
             error.statusCode = 403;
             throw error;
         }
-
-        // Update the role in the Students table and track who assigned it
         const result = await supervisorRepository.updateStudentRole(userId, 'leader', supervisorId);
-
         if (!result) {
             const error = new Error('Student record not found.');
             error.statusCode = 404;
             throw error;
         }
-
         return result;
     }
 
@@ -76,7 +67,58 @@ class SupervisorService {
         }
 
         // Reset to member and clear assignment tracker
-        return await supervisorRepository.updateStudentRole(userId, 'member', null);
+        await supervisorRepository.updateStudentRole(userId, 'member', null);
+
+        // Remove pre-project group records (looks up year from DB)
+        await supervisorRepository.deleteGroup(userId);
+
+        return { id: userId, role: 'member' };
+    }
+
+    /**
+     * Form a group with a leader and members
+     */
+    async formGroup(leaderId, memberIds, groupNumber, year, supervisorId) {
+        // 1. Check if leader is already in a project
+        const isLeaderInProject = await supervisorRepository.checkStudentProjectMembership(leaderId);
+        if (isLeaderInProject) {
+            throw new Error('The selected leader is already part of an active project.');
+        }
+
+        // 2. Check if any members are already in a project
+        if (memberIds && memberIds.length > 0) {
+            for (const memberId of memberIds) {
+                const isMemberInProject = await supervisorRepository.checkStudentProjectMembership(memberId);
+                if (isMemberInProject) {
+                    const member = await supervisorRepository.getStudentById(memberId);
+                    throw new Error(`Student ${member.first_name} ${member.last_name} is already part of an active project.`);
+                }
+            }
+        }
+
+        // 3. Check group number uniqueness within the same department and year
+        const leader = await supervisorRepository.getStudentById(leaderId);
+        if (!leader) {
+            const error = new Error('Leader student record not found.');
+            error.statusCode = 404;
+            throw error;
+        }
+        const leaderDepartment = leader.department;
+        if (leaderDepartment) {
+            const hasConflict = await supervisorRepository.checkGroupNumberConflict(groupNumber, year, leaderDepartment);
+            if (hasConflict) {
+                const error = new Error(
+                    `Group number ${groupNumber} is already assigned to another group in the ${leaderDepartment} department for ${year}. Please choose a different group number.`
+                );
+                error.statusCode = 409;
+                throw error;
+            }
+        }
+
+        // 4. Create the group
+        await supervisorRepository.createGroup(leaderId, memberIds, groupNumber, year, supervisorId);
+
+        return await supervisorRepository.getStudentById(leaderId);
     }
 }
 

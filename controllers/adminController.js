@@ -350,6 +350,40 @@ const demoteStudentLeader = async (req, res) => {
 };
 
 /**
+ * Get all groups (admin view)
+ */
+const getAllGroups = async (req, res) => {
+    try {
+        const result = await adminService.getAllGroups();
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error fetching groups:', error);
+        res.status(500).json({ success: false, message: 'Error fetching groups', error: error.message });
+    }
+};
+
+/**
+ * Disband a group (admin only)
+ */
+const disbandGroup = async (req, res) => {
+    try {
+        const { groupNumber, year } = req.params;
+        const result = await adminService.disbandGroup(parseInt(groupNumber), parseInt(year));
+
+        if (!result.success) {
+            return res.status(404).json(result);
+        }
+
+        await activityService.log(null, req.user.sub, 'GROUP_DISBANDED', `Disbanded Group ${groupNumber} (${year}): ${result.disbandedCount} student(s) reset`);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error disbanding group:', error);
+        res.status(500).json({ success: false, message: 'Error disbanding group', error: error.message });
+    }
+};
+
+/**
  * Get all activity logs with pagination and filters
  */
 const getAllActivityLogs = async (req, res) => {
@@ -526,7 +560,9 @@ module.exports = {
     restoreBackup,
     deleteBackup,
     downloadBackup,
-    uploadBackup
+    uploadBackup,
+    getAllGroups,
+    disbandGroup
 };
 
 /**

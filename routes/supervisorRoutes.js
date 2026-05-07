@@ -14,4 +14,7 @@ router.put('/students/:userId/role', supervisorController.setStudentLeader);
 // Unassign a student as leader
 router.put('/students/:userId/unassign-role', supervisorController.unassignStudentLeader);
 
+// Form a group
+router.post('/groups', supervisorController.formGroup);
+
 module.exports = router;

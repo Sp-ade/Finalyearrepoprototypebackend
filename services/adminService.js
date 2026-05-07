@@ -323,6 +323,30 @@ class AdminService {
             client.release();
         }
     }
+    /**
+     * Get all groups from Project_Members (for admin view)
+     */
+    async getAllGroups() {
+        const students = await supervisorRepository.getAllStudents();
+        return { success: true, students };
+    }
+
+    /**
+     * Disband a group (admin only)
+     */
+    async disbandGroup(groupNumber, year) {
+        const result = await adminRepository.disbandGroup(groupNumber, year);
+
+        if (result.disbandedCount === 0) {
+            return { success: false, message: 'Group not found or already disbanded.' };
+        }
+
+        return {
+            success: true,
+            message: `Group ${groupNumber} (${year}) disbanded. ${result.disbandedCount} student(s) reset to member.`,
+            disbandedCount: result.disbandedCount
+        };
+    }
 }
 
 module.exports = new AdminService();

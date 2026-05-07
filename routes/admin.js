@@ -40,6 +40,10 @@ router.put('/students/:studentId/reassign-supervisor', adminController.reassignL
 router.put('/students/:studentId/demote', adminController.demoteStudentLeader);
 router.put('/projects/:projectId/reassign-supervisor', adminController.reassignProjectSupervisor);
 
+// Group Management Routes (Admin)
+router.get('/groups', adminController.getAllGroups);
+router.delete('/groups/:groupNumber/:year', adminController.disbandGroup);
+
 // Database Management Routes
 router.get('/database/backups', adminController.listBackups);
 router.post('/database/backup', adminController.createBackup);

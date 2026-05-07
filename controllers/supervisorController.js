@@ -38,3 +38,21 @@ exports.unassignStudentLeader = async (req, res) => {
         res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
     }
 };
+
+// Form a group with leader and members
+exports.formGroup = async (req, res) => {
+    try {
+        const { leaderId, memberIds, groupNumber, year } = req.body;
+        const supervisorId = req.user.sub;
+        
+        if (!leaderId || !groupNumber || !year) {
+            return res.status(400).json({ error: 'Leader ID, Group Number, and Year are required.' });
+        }
+
+        const result = await supervisorService.formGroup(leaderId, memberIds, groupNumber, year, supervisorId);
+        res.json({ message: 'Group successfully formed', student: result });
+    } catch (error) {
+        console.error('Error forming group:', error);
+        res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+    }
+};

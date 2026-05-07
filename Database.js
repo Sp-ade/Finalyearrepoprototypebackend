@@ -106,7 +106,8 @@ module.exports = {
     await pool.query(`
       ALTER TABLE Notifications
       ADD COLUMN IF NOT EXISTS source_type VARCHAR(50);
-    `)
+    `);
+    await this.ensureProjectMembersTable();
   },
   async createUser(
     email,
@@ -267,6 +268,47 @@ module.exports = {
       console.log('✓ Staff_Permissions table ready');
     } catch (err) {
       console.error('❌ Error initializing Staff_Permissions table:', err.message);
+    }
+  },
+  async ensureProjectMembersTable() {
+    try {
+      // 1. Create table if not exists (referencing Projects and Users)
+      // Note: This assumes Projects table is created by separate script, 
+      // but we use IF EXISTS or similar to be safe.
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS Project_Members (
+            id SERIAL PRIMARY KEY,
+            project_id INT REFERENCES Projects(project_id) ON DELETE CASCADE,
+            student_id INT REFERENCES Users(id) ON DELETE CASCADE,
+            role VARCHAR(20) DEFAULT 'Member' CHECK (role IN ('Leader', 'Member')),
+            group_number INT,
+            year INT,
+            assigned_by INT REFERENCES Users(id) ON DELETE SET NULL,
+            joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // 2. Migrations for existing table
+      await pool.query(`ALTER TABLE Project_Members ALTER COLUMN project_id DROP NOT NULL;`);
+      await pool.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS group_number INT;`);
+      await pool.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS year INT;`);
+      await pool.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS assigned_by INT REFERENCES Users(id) ON DELETE SET NULL;`);
+      
+      // Ensure PK/Unique constraints
+      // If the old table had a composite PK (project_id, student_id), we might need to drop it if we added SERIAL id.
+      // But let's just add the year uniqueness.
+      await pool.query(`
+        ALTER TABLE Project_Members 
+        DROP CONSTRAINT IF EXISTS project_members_student_id_year_key;
+      `);
+      await pool.query(`
+        ALTER TABLE Project_Members 
+        ADD CONSTRAINT project_members_student_id_year_key UNIQUE(student_id, year);
+      `);
+
+      console.log('✓ Project_Members table ready');
+    } catch (err) {
+      console.warn('Note: Project_Members table check/update finished. (If Projects table not yet created, this is expected)');
     }
   }
 }
