@@ -284,27 +284,27 @@ class AdminRepository {
     }
 
     /**
-     * Disband a group: delete all pre-project group rows and reset student roles
+     * Disband a group: delete all group rows and reset student roles
      */
     async disbandGroup(groupNumber, year) {
         const client = await db.pool.connect();
         try {
             await client.query('BEGIN');
 
-            // 1. Find all student_ids in this group (pre-project only)
+            // 1. Find all student_ids in this group
             const membersRes = await client.query(
-                'SELECT student_id FROM Project_Members WHERE group_number = $1 AND year = $2 AND project_id IS NULL',
+                'SELECT student_id FROM Project_Members WHERE group_number = $1 AND year = $2',
                 [groupNumber, year]
             );
             const memberIds = membersRes.rows.map(r => r.student_id);
 
             // 2. Delete the group rows
             await client.query(
-                'DELETE FROM Project_Members WHERE group_number = $1 AND year = $2 AND project_id IS NULL',
+                'DELETE FROM Project_Members WHERE group_number = $1 AND year = $2',
                 [groupNumber, year]
             );
 
-            // 3. Reset Students.role to 'member' for anyone whose leader role came from this group
+            // 3. Reset Students.role to 'member' for those students
             if (memberIds.length > 0) {
                 await client.query(
                     `UPDATE Students SET role = 'member', leader_assigned_by = NULL WHERE user_id = ANY($1::int[])`,

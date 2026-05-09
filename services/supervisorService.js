@@ -1,4 +1,7 @@
 const supervisorRepository = require('../repositories/supervisorRepository');
+const userRepository = require('../repositories/userRepository');
+const notificationService = require('./notificationService');
+const emailService = require('./emailService');
 
 class SupervisorService {
     /**
@@ -118,7 +121,49 @@ class SupervisorService {
         // 4. Create the group
         await supervisorRepository.createGroup(leaderId, memberIds, groupNumber, year, supervisorId);
 
+        // 5. Notify students (Non-blocking)
+        this._notifyGroupFormation(leaderId, memberIds, groupNumber, year, supervisorId).catch(err => {
+            console.error('Error in group formation notification background task:', err);
+        });
+
         return await supervisorRepository.getStudentById(leaderId);
+    }
+
+    /**
+     * Helper to send notifications in the background
+     */
+    async _notifyGroupFormation(leaderId, memberIds, groupNumber, year, supervisorId) {
+        try {
+            // Fetch supervisor info
+            const supervisor = await userRepository.findById(supervisorId);
+            const supervisorName = supervisor ? `${supervisor.first_name} ${supervisor.last_name}` : 'A Supervisor';
+
+            // Fetch all student IDs involved
+            const allStudentIds = [leaderId, ...(memberIds || [])];
+            const students = await supervisorRepository.getStudentsByIds(allStudentIds);
+
+            for (const student of students) {
+                const role = student.id === parseInt(leaderId) ? 'Leader' : 'Member';
+                
+                // 1. In-App Notification
+                await notificationService.createNotification(
+                    student.id,
+                    'New Group Assignment',
+                    `You have been assigned to Group ${groupNumber} (${year}) by ${supervisorName} as a ${role}.`,
+                    'group_assignment'
+                );
+
+                // 2. Email Notification
+                await emailService.sendGroupFormationEmail(student.email, {
+                    supervisorName,
+                    groupNumber,
+                    year,
+                    role
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send group formation notifications:', error);
+        }
     }
 }
 

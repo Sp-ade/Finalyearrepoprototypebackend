@@ -111,6 +111,52 @@ const sendLoginNotification = async (email) => {
 };
 
 /**
+ * Send group formation notification email
+ */
+const sendGroupFormationEmail = async (email, { supervisorName, groupNumber, year, role }) => {
+  console.log(`📧 Sending group formation email to: ${email}`);
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: `Group Assignment - Nile Repository (${year})`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+          <h2 style="color: #2b4593; text-align: center;">Group Assignment Notification</h2>
+          <p>Hello,</p>
+          <p>You have been assigned to a project group for the academic year <strong>${year}</strong> by <strong>${supervisorName}</strong>.</p>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 10px 0;"><strong>Group Details:</strong></p>
+            <ul style="margin: 0; padding-left: 20px;">
+              <li><strong>Group Number:</strong> ${groupNumber}</li>
+              <li><strong>Your Role:</strong> ${role}</li>
+              <li><strong>Academic Year:</strong> ${year}</li>
+            </ul>
+          </div>
+          
+          <p>You can now collaborate with your group members and start working on your project submissions.</p>
+          
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard"
+               style="background-color: #2b4593; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              View Dashboard
+            </a>
+          </div>
+          
+          <p style="color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
+            This is an automated notification from the Nile University Repository.
+          </p>
+        </div>
+      `,
+    });
+    console.log(`✅ Group formation email sent to ${email}`);
+  } catch (err) {
+    console.error('❌ Failed to send group formation email:', err.message);
+  }
+};
+
+/**
  * Send password reset email
  */
 const sendResetPasswordEmail = async (email, token) => {
@@ -145,4 +191,5 @@ module.exports = {
   sendVerificationEmail,
   sendLoginNotification,
   sendResetPasswordEmail,
+  sendGroupFormationEmail,
 };

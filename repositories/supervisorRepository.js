@@ -103,6 +103,20 @@ class SupervisorRepository {
     }
 
     /**
+     * Get multiple students by their user IDs
+     */
+    async getStudentsByIds(userIds) {
+        if (!userIds || userIds.length === 0) return [];
+        const query = `
+            SELECT id, email, first_name, last_name
+            FROM Users
+            WHERE id = ANY($1) AND role = 'student'
+        `;
+        const result = await db.query(query, [userIds]);
+        return result.rows;
+    }
+
+    /**
      * Reassign the supervisor for a student leader
      */
     async reassignLeaderSupervisor(studentUserId, newSupervisorId) {

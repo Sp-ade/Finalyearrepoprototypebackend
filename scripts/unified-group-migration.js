@@ -83,26 +83,19 @@ async function runUnifiedMigration() {
         console.log('✓ Index on student_id ensured.');
 
 
-        // --- PART 2: LEADER UNASSIGNMENT (Gated) ---
+        // --- PART 2: LEADER UNASSIGNMENT & GROUP DISBAND (Gated) ---
         if (isLeaderMigrate) {
-            console.log('\n[2/2] LEADER_MIGRATE=true: Resetting legacy leader roles...');
+            console.log('\n[2/2] LEADER_MIGRATE=true: Resetting roles and disbanding all groups...');
             
-            const countRes = await db.query("SELECT COUNT(*) FROM Students WHERE role = 'leader'");
-            const leaderCount = parseInt(countRes.rows[0].count);
-            
-            if (leaderCount > 0) {
-                console.log(`Found ${leaderCount} legacy leaders. Resetting to 'member'...`);
-                await db.query(`UPDATE Students SET role = 'member', leader_assigned_by = NULL WHERE role = 'leader'`);
-                console.log('✓ Legacy student roles reset.');
-            } else {
-                console.log('No legacy leaders found.');
-            }
+            // 1. Reset all student roles to 'member' to ensure clean state
+            const resetRes = await db.query(`UPDATE Students SET role = 'member', leader_assigned_by = NULL`);
+            console.log(`✓ Reset ${resetRes.rowCount} student records to 'member' in Students table.`);
 
-            // Also clear pre-project groups to avoid conflicts
-            const pmRes = await db.query(`DELETE FROM Project_Members WHERE project_id IS NULL`);
-            console.log(`✓ Cleared ${pmRes.rowCount} pre-project entries from Project_Members.`);
+            // 2. Clear the entire Project_Members table (disband all groups)
+            const pmRes = await db.query(`DELETE FROM Project_Members`);
+            console.log(`✓ Disbanded all groups by clearing ${pmRes.rowCount} entries from Project_Members.`);
         } else {
-            console.log('\n[2/2] LEADER_MIGRATE is not true. Skipping role reset.');
+            console.log('\n[2/2] LEADER_MIGRATE is not true. Skipping group disbanding.');
         }
 
         console.log('\n✅ Unified Migration completed successfully!');
