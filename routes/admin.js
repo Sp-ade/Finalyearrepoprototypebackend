@@ -14,6 +14,7 @@ router.use(verifyAdmin);
 router.get('/users', adminController.getAllUsers);
 router.get('/users/stats', adminController.getUserStats);
 router.put('/users/:id/status', adminController.updateUserStatus);
+router.put('/users/:id', adminController.updateUser);
 router.delete('/users/:id', adminController.deleteUser);
 
 // Project Statistics Routes
@@ -42,6 +43,7 @@ router.put('/projects/:projectId/reassign-supervisor', adminController.reassignP
 
 // Group Management Routes (Admin)
 router.get('/groups', adminController.getAllGroups);
+router.put('/groups/:groupNumber/:year', adminController.updateGroup);
 router.delete('/groups/:groupNumber/:year', adminController.disbandGroup);
 
 // Database Management Routes

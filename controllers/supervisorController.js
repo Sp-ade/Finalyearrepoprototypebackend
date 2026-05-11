@@ -56,3 +56,28 @@ exports.formGroup = async (req, res) => {
         res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
     }
 };
+
+// Update an existing group
+exports.updateGroup = async (req, res) => {
+    try {
+        const { groupNumber, year } = req.params;
+        const { leaderId, memberIds } = req.body;
+        const supervisorId = req.user.sub;
+
+        if (!leaderId) {
+            return res.status(400).json({ error: 'Leader ID is required.' });
+        }
+
+        const result = await supervisorService.updateGroup(
+            parseInt(groupNumber),
+            parseInt(year),
+            leaderId,
+            memberIds,
+            supervisorId
+        );
+        res.json(result);
+    } catch (error) {
+        console.error('Error updating group:', error);
+        res.status(error.statusCode || 500).json({ error: error.message || 'Internal server error' });
+    }
+};

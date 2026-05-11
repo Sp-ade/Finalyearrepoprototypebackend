@@ -17,4 +17,7 @@ router.put('/students/:userId/unassign-role', supervisorController.unassignStude
 // Form a group
 router.post('/groups', supervisorController.formGroup);
 
+// Update a group
+router.put('/groups/:groupNumber/:year', supervisorController.updateGroup);
+
 module.exports = router;

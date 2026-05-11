@@ -4,6 +4,7 @@ const supervisorRepository = require('../repositories/supervisorRepository');
 const activityRepository = require('../repositories/activityRepository');
 const projectRepository = require('../repositories/projectRepository');
 const submissionRepository = require('../repositories/submissionRepository');
+const userRepository = require('../repositories/userRepository');
 
 class AdminService {
     /**
@@ -345,6 +346,47 @@ class AdminService {
             success: true,
             message: `Group ${groupNumber} (${year}) disbanded. ${result.disbandedCount} student(s) reset to member.`,
             disbandedCount: result.disbandedCount
+        };
+    }
+
+    /**
+     * Admin Override: Update an existing group and potentially reassign its supervisor.
+     */
+    async updateGroup(groupNumber, year, leaderId, memberIds, newSupervisorId) {
+        // 1. Validate new supervisor exists
+        const supervisor = await userRepository.findById(newSupervisorId);
+        if (!supervisor || supervisor.role !== 'supervisor') {
+            throw new Error('Assigned supervisor not found or is not a supervisor.');
+        }
+
+        // 2. Perform the update via adminRepository
+        await adminRepository.adminUpdateGroup(groupNumber, year, leaderId, memberIds, newSupervisorId);
+
+        return { 
+            success: true, 
+            message: `Group ${groupNumber} (${year}) successfully updated by Admin.` 
+        };
+    }
+
+    /**
+     * Update user details (Admin override)
+     */
+    async updateUser(userId, userData) {
+        // 1. Fetch user to confirm existence and get current role
+        const user = await userRepository.findById(userId);
+        if (!user) {
+            return { success: false, message: 'User not found' };
+        }
+
+        // 2. Add role to data for repository logic
+        const updateData = { ...userData, role: user.role };
+
+        // 3. Call repository to perform update
+        await userRepository.updateUserDetails(userId, updateData);
+
+        return {
+            success: true,
+            message: 'User details updated successfully'
         };
     }
 }

@@ -130,6 +130,39 @@ class SupervisorService {
     }
 
     /**
+     * Update an existing group
+     */
+    async updateGroup(groupNumber, year, leaderId, memberIds, supervisorId) {
+        // 1. Verify that the group belongs to this supervisor
+        const students = await supervisorRepository.getAllStudents();
+        const currentMembers = students.filter(s => s.group_number === parseInt(groupNumber) && s.year === parseInt(year));
+        
+        if (currentMembers.length === 0) {
+            const error = new Error('Group not found.');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Check permission: ensure the requesting supervisor is the one who assigned the group
+        const originalAssignedBy = currentMembers.find(m => m.leader_assigned_by)?.leader_assigned_by;
+        if (originalAssignedBy && originalAssignedBy !== parseInt(supervisorId)) {
+            const error = new Error('You do not have permission to edit this group. Only the supervisor who assigned it can make changes.');
+            error.statusCode = 403;
+            throw error;
+        }
+
+        // 2. Perform the update
+        await supervisorRepository.updateGroupDetails(groupNumber, year, leaderId, memberIds, supervisorId);
+
+        // 3. Notify (background)
+        this._notifyGroupFormation(leaderId, memberIds, groupNumber, year, supervisorId).catch(err => {
+            console.error('Error in group update notification:', err);
+        });
+
+        return { success: true, message: 'Group updated successfully' };
+    }
+
+    /**
      * Helper to send notifications in the background
      */
     async _notifyGroupFormation(leaderId, memberIds, groupNumber, year, supervisorId) {

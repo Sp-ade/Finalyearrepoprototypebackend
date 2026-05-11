@@ -122,6 +122,47 @@ module.exports = {
       'UPDATE Users SET verification_token = $1, verification_expires = $2 WHERE email = $3',
       [token, expiry, email]
     )
+  },
+  updateUserDetails: async (userId, data) => {
+    const { firstName, lastName, email, department, roleSpecificId, role } = data;
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Update base user info
+      await client.query(
+        `UPDATE Users 
+         SET first_name = $1, last_name = $2, email = $3, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $4`,
+        [firstName, lastName, email, userId]
+      );
+      
+      // Update role-specific info
+      if (role === 'student') {
+        await client.query(
+          `UPDATE Students 
+           SET student_matric_no = $1, department = $2 
+           WHERE user_id = $3`,
+          [roleSpecificId, department, userId]
+        );
+      } else if (role === 'supervisor') {
+        await client.query(
+          `UPDATE Supervisors 
+           SET staff_id = $1 
+           WHERE user_id = $2`,
+          [roleSpecificId, userId]
+        );
+      }
+      
+      await client.query('COMMIT');
+      return { success: true };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

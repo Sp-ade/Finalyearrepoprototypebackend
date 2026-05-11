@@ -321,6 +321,70 @@ class AdminRepository {
             client.release();
         }
     }
+
+    /**
+     * Admin Override: Update an existing group's details and potentially reassign supervisor.
+     */
+    async adminUpdateGroup(groupNumber, year, leaderId, memberIds, newSupervisorId) {
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Identify all current members to reset roles
+            const currentMembersRes = await client.query(
+                'SELECT student_id FROM Project_Members WHERE group_number = $1 AND year = $2',
+                [groupNumber, year]
+            );
+            const currentMemberIds = currentMembersRes.rows.map(r => r.student_id);
+
+            // 2. Delete all existing members for this group
+            await client.query(
+                'DELETE FROM Project_Members WHERE group_number = $1 AND year = $2',
+                [groupNumber, year]
+            );
+
+            // 3. Reset roles for all previous members
+            if (currentMemberIds.length > 0) {
+                await client.query(
+                    `UPDATE Students SET role = 'member', leader_assigned_by = NULL WHERE user_id = ANY($1::int[])`,
+                    [currentMemberIds]
+                );
+            }
+
+            // 4. Insert/Update the new leader
+            await client.query(`
+                INSERT INTO Project_Members (student_id, role, group_number, year, assigned_by)
+                VALUES ($1, 'Leader', $2, $3, $4)
+                ON CONFLICT (student_id, year) DO UPDATE 
+                SET role = 'Leader', group_number = $2, assigned_by = $4
+            `, [leaderId, groupNumber, year, newSupervisorId]);
+
+            // 5. Insert/Update the new members
+            if (memberIds && memberIds.length > 0) {
+                for (const memberId of memberIds) {
+                    await client.query(`
+                        INSERT INTO Project_Members (student_id, role, group_number, year, assigned_by)
+                        VALUES ($1, 'Member', $2, $3, $4)
+                        ON CONFLICT (student_id, year) DO UPDATE 
+                        SET role = 'Member', group_number = $2, assigned_by = $4
+                    `, [memberId, groupNumber, year, newSupervisorId]);
+                }
+            }
+
+            // 6. Update Students table for the new leader
+            await client.query(`
+                UPDATE Students SET role = 'leader', leader_assigned_by = $1 WHERE user_id = $2
+            `, [newSupervisorId, leaderId]);
+
+            await client.query('COMMIT');
+            return { success: true };
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = new AdminRepository();

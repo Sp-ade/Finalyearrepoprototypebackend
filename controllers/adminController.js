@@ -72,7 +72,7 @@ const updateUserStatus = async (req, res) => {
 const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         // Prevent admins from deleting themselves via this route for safety
         if (parseInt(id) === req.user.sub) {
             return res.status(400).json({
@@ -96,6 +96,57 @@ const deleteUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error deleting user',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Update user details with admin password verification
+ */
+const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userData, adminPassword } = req.body;
+
+        if (!adminPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Admin password is required to perform this update'
+            });
+        }
+
+        // 1. Verify Admin Password
+        try {
+            await authService.verifyPassword(req.user.email, adminPassword);
+        } catch (err) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid admin password. Verification failed.'
+            });
+        }
+
+        // 2. Call service to update user
+        const result = await adminService.updateUser(parseInt(id), userData);
+
+        if (!result.success) {
+            return res.status(404).json(result);
+        }
+
+        // 3. Log the activity
+        await activityService.log(
+            null,
+            req.user.sub,
+            'USER_UPDATED',
+            `Updated details for user ${userData.email || id}`
+        );
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating user',
             error: error.message
         });
     }
@@ -384,13 +435,55 @@ const disbandGroup = async (req, res) => {
 };
 
 /**
+ * Update group details (Admin override)
+ */
+const updateGroup = async (req, res) => {
+    try {
+        const { groupNumber, year } = req.params;
+        const { leaderId, memberIds, newSupervisorId } = req.body;
+
+        if (!leaderId || !newSupervisorId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Leader ID and New Supervisor ID are required'
+            });
+        }
+
+        const result = await adminService.updateGroup(
+            parseInt(groupNumber),
+            parseInt(year),
+            leaderId,
+            memberIds,
+            newSupervisorId
+        );
+
+        // Log the activity
+        await activityService.log(
+            null, 
+            req.user.sub, 
+            'GROUP_UPDATED_ADMIN', 
+            `Admin updated details for Group ${groupNumber} (${year})`
+        );
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error updating group:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating group',
+            error: error.message
+        });
+    }
+};
+
+/**
  * Get all activity logs with pagination and filters
  */
 const getAllActivityLogs = async (req, res) => {
     try {
         const { limit, offset, search, action: actionType, role } = req.query;
-        const result = await adminService.getAllActivityLogs({ 
-            limit: limit ? parseInt(limit) : 50, 
+        const result = await adminService.getAllActivityLogs({
+            limit: limit ? parseInt(limit) : 50,
             offset: offset ? parseInt(offset) : 0,
             search,
             actionType,
@@ -460,7 +553,7 @@ const listBackups = async (req, res) => {
 const createBackup = async (req, res) => {
     try {
         const backup = await backupService.createBackup();
-        
+
         // Log the activity
         await activityService.log(null, req.user.sub, 'DATABASE_BACKUP', `Created database backup: ${backup.filename}`);
 
@@ -525,7 +618,7 @@ const downloadBackup = async (req, res) => {
     try {
         const { filename } = req.params;
         const filePath = path.join(__dirname, '../backups', filename);
-        
+
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ success: false, message: 'Backup file not found' });
         }
@@ -541,6 +634,7 @@ module.exports = {
     getAllUsers,
     getUserStats,
     updateUserStatus,
+    updateUser,
     deleteUser,
     getProjectStats,
     getRequestStats,
@@ -562,7 +656,8 @@ module.exports = {
     downloadBackup,
     uploadBackup,
     getAllGroups,
-    disbandGroup
+    disbandGroup,
+    updateGroup
 };
 
 /**
@@ -577,8 +672,8 @@ async function uploadBackup(req, res) {
         // Log the activity
         await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${req.file.filename}`);
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             message: 'Backup uploaded successfully',
             backup: {
                 filename: req.file.filename,
