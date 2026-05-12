@@ -187,9 +187,42 @@ const sendResetPasswordEmail = async (email, token) => {
   }
 };
 
+/**
+ * Send contact form submission to admin
+ */
+const sendContactEmail = async ({ fromName, fromEmail, message }) => {
+  const adminEmail = process.env.EMAIL_USER; // Sending to the system admin
+  console.log(`📧 Sending contact form message from: ${fromEmail}`);
+
+  try {
+    await sendEmail({
+      to: adminEmail,
+      subject: `New Contact Form Submission: ${fromName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+          <h2 style="color: #2b4593; text-align: center;">New Complaint/Suggestion</h2>
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+            <p><strong>From:</strong> ${fromName} (${fromEmail})</p>
+            <p><strong>Message:</strong></p>
+            <p style="white-space: pre-wrap; color: #1a202c;">${message}</p>
+          </div>
+          <p style="color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
+            This message was sent via the Nile University Repository contact form.
+          </p>
+        </div>
+      `,
+    });
+    console.log(`✅ Contact email sent from ${fromEmail}`);
+  } catch (err) {
+    console.error('❌ Failed to send contact email:', err.message);
+    throw err;
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendLoginNotification,
   sendResetPasswordEmail,
   sendGroupFormationEmail,
+  sendContactEmail,
 };

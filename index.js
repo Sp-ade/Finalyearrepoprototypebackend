@@ -9,6 +9,7 @@ const requestRoutes = require('./routes/requests')
 const adminRoutes = require('./routes/admin')
 const submissionRoutes = require('./routes/submissionRoutes')
 const supervisorRoutes = require('./routes/supervisorRoutes')
+const contactRoutes = require('./routes/contactRoutes')
 const errorHandler = require('./middleware/errorHandler')
 const db = require('./Database')
 const dropTables = require('./scripts/drop-tables')
@@ -78,6 +79,7 @@ app.use('/api/notifications', notificationRoutes)
 
 const staffPermissionRoutes = require('./routes/staffPermissionRoutes');
 app.use('/api/staff-permissions', staffPermissionRoutes)
+app.use('/api/contact', contactRoutes)
 
 console.log('Routes registered:')
 

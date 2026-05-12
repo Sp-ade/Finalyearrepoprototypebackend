@@ -19,28 +19,33 @@ module.exports = {
           department: studentResult.rows[0].department
         }
 
-        // Fetch pre-project group members if they exist
+        // Fetch group members if they exist
         const groupRes = await db.query(
           `SELECT group_number, year 
            FROM Project_Members 
-           WHERE student_id = $1 AND project_id IS NULL`,
+           WHERE student_id = $1 
+           ORDER BY year DESC LIMIT 1`,
           [userId]
         )
 
         if (groupRes.rows.length > 0) {
           const { group_number, year } = groupRes.rows[0];
+          data.groupNumber = group_number;
+          data.year = year;
+
           const membersRes = await db.query(
             `SELECT u.first_name, u.last_name, s.student_matric_no, s.role
              FROM Project_Members pm
              JOIN Users u ON pm.student_id = u.id
              JOIN Students s ON u.id = s.user_id
-             WHERE pm.group_number = $1 AND pm.year = $2 AND pm.project_id IS NULL
+             WHERE pm.group_number = $1 AND pm.year = $2
              ORDER BY CASE WHEN s.role = 'leader' THEN 0 ELSE 1 END, u.first_name ASC`,
             [group_number, year]
           )
           data.groupMembers = membersRes.rows.map(m => ({
             name: `${m.first_name} ${m.last_name}`,
-            matricNo: m.student_matric_no
+            matricNo: m.student_matric_no,
+            role: m.role
           }))
         }
         return data

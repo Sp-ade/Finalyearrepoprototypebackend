@@ -13,8 +13,7 @@ const authenticate = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token);
-        req.user = decoded;
-
+        
         // Double-Lock: Check database status on every request to ensure verification hasn't been bypassed
         const userRepository = require('../repositories/userRepository');
         const user = await userRepository.findById(decoded.sub);
@@ -25,6 +24,9 @@ const authenticate = async (req, res, next) => {
                 message: 'Account not verified. Please verify your email.'
             });
         }
+
+        // Attach full user object to req.user (keeping 'sub' for compatibility)
+        req.user = { ...decoded, ...user };
 
         next();
     } catch (err) {
