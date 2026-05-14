@@ -506,7 +506,7 @@ exports.verificationEmailHtml = (verificationLink) => `
         Verify Email Address
       </a>
     </div>
-    <p style="color: #666; font-size: 12px;">This link will expire in 1 hour. If you didn't create an account, you can safely ignore this email.</p>
+    <p style="color: #666; font-size: 12px;">This link will expire in 1 hour. If you didn't create an account, you can safely ignore this email and try logging with the same account to get a new verification mail.</p>
   </div>
 `;
 
