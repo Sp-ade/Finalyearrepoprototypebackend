@@ -39,6 +39,27 @@ class ActivityService {
     async logStorageCleanup(userId, stats) {
         return await this.log(null, userId, 'STORAGE_CLEANUP', `Cleaned up ${stats.deletedCount} unused storage files.`);
     }
+
+    async logUserLogin(userId, email) {
+        return await this.log(null, userId, 'USER_LOGIN', `User ${email} logged in`);
+    }
+
+    async logUserLogout(userId, email) {
+        return await this.log(null, userId, 'USER_LOGOUT', `User ${email} logged out`);
+    }
+
+    async logUserSignup(userId, email) {
+        return await this.log(null, userId, 'USER_SIGNUP', `User ${email} created an account`);
+    }
+
+    async logPasswordResetRequest(userId, email) {
+        return await this.log(null, userId, 'PASSWORD_RESET_REQ', `Password reset requested for ${email}`);
+    }
+
+    async logPasswordResetSuccess(userId, email) {
+        return await this.log(null, userId, 'PASSWORD_RESET_SUCCESS', `Password successfully reset for ${email}`);
+    }
 }
+
 
 module.exports = new ActivityService();

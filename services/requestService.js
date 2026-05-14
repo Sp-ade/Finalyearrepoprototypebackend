@@ -24,8 +24,9 @@ class RequestService {
                 const notificationService = require('./notificationService');
                 const title = 'New Access Request';
                 const message = `A student has submitted a new ${mode} request for the project "${project.title}".`;
-                notificationService.createNotification(project.supervisor_id, title, message, 'new_request', null, request.request_id, 'request')
+                notificationService.createNotification(project.supervisor_id, title, message, 'new_request', null, project.project_id, 'project')
                     .catch(err => console.error('Error emitting request notification:', err));
+
             }
         } catch (err) {
             console.error('Notification service integration error:', err);
@@ -103,9 +104,10 @@ class RequestService {
                 message,
                 'request_status_change',
                 null,
-                updated.request_id,
-                'request'
+                updated.project_id,
+                'project'
             ).catch(err => console.error('Error emitting request notification:', err));
+
         } catch (err) {
             console.error('Notification service integration error:', err);
         }

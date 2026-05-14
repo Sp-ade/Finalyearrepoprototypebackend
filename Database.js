@@ -293,7 +293,7 @@ module.exports = {
       await pool.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS group_number INT;`);
       await pool.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS year INT;`);
       await pool.query(`ALTER TABLE Project_Members ADD COLUMN IF NOT EXISTS assigned_by INT REFERENCES Users(id) ON DELETE SET NULL;`);
-      
+
       // Ensure PK/Unique constraints
       // If the old table had a composite PK (project_id, student_id), we might need to drop it if we added SERIAL id.
       // But let's just add the year uniqueness.

@@ -2,6 +2,8 @@ const authService = require('../services/authservice')
 const jwt = require('../utils/jwt')
 const emailService = require('../services/emailService')
 const templates = require('../utils/templates')
+const activityService = require('../services/activityService')
+
 
 exports.login = async (req, res, next) => {
   try {
@@ -23,12 +25,17 @@ exports.login = async (req, res, next) => {
       user: result.user,
       token: result.token
     });
+
+    // Log the activity (async)
+    activityService.logUserLogin(result.user.id, result.user.email).catch(err => console.error('Logging error:', err));
+
   } catch (err) {
     next(err)
   }
 }
 
 exports.logout = async (req, res) => {
+  const user = req.user;
   /*
   res.clearCookie('token', {
     httpOnly: true,
@@ -37,6 +44,11 @@ exports.logout = async (req, res) => {
   });
   */
   res.json({ success: true, message: 'Logged out successfully' });
+
+  // Log the activity (async)
+  if (user) {
+    activityService.logUserLogout(user.id, user.email).catch(err => console.error('Logging error:', err));
+  }
 }
 
 exports.getUserByEmail = async (req, res, next) => {
@@ -129,7 +141,14 @@ exports.forgotPassword = async (req, res, next) => {
     // Call service. It handles generating token and sending email.
     await authService.forgotPassword(email)
     res.json({ message: 'Recovery instructions have been sent to your email.' })
+
+    // Log the request (async)
+    // We try to find the user first to get the ID if possible
+    authService.getUserByEmail(email).then(user => {
+      activityService.logPasswordResetRequest(user.id, email).catch(() => {});
+    }).catch(() => {});
   } catch (err) {
+
     next(err)
   }
 }
@@ -157,8 +176,20 @@ exports.handleResetPassword = async (req, res, next) => {
     await authService.resetPassword(token, password);
 
     // SUCCESS: Serve the password reset success page from template
-    return res.send(templates.resetPasswordSuccess);
+    res.send(templates.resetPasswordSuccess);
+
+    // Log the success (async)
+    // We need to decode the token to get the email
+    try {
+      const decoded = jwt.verify(token);
+      authService.getUserByEmail(decoded.email).then(user => {
+        activityService.logPasswordResetSuccess(user.id, user.email).catch(() => {});
+      }).catch(() => {});
+    } catch (e) {}
+
+    return;
   } catch (err) {
+
     // FAILURE: Show the error page from template
     return res.status(400).send(templates.resetPasswordFailed(err.message, token));
   }

@@ -4,6 +4,23 @@
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+/**
+ * Browser Pages:
+ * - verificationSuccess
+ * - verificationFailed
+ * - confirmVerificationPage
+ * - resetPasswordForm
+ * - resetPasswordSuccess
+ * - resetPasswordFailed
+ * 
+ * Email Bodies:
+ * - verificationEmailHtml
+ * - loginNotificationHtml
+ * - groupFormationEmailHtml
+ * - resetPasswordEmailHtml
+ * - contactEmailHtml
+ */
+
 exports.verificationSuccess = `
 <!DOCTYPE html>
 <html lang="en">
@@ -474,3 +491,98 @@ exports.resetPasswordFailed = (errorMessage, token) => {
 </html>
 `;
 };
+
+
+/**
+ * Verification email body
+ */
+exports.verificationEmailHtml = (verificationLink) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+    <h2 style="color: #28a745; text-align: center;">Account Verification</h2>
+    <p>Thank you for joining the Nile University Repository. Please click the button below to verify your account:</p>
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${verificationLink}"
+         style="background-color: #28a745; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+        Verify Email Address
+      </a>
+    </div>
+    <p style="color: #666; font-size: 12px;">This link will expire in 1 hour. If you didn't create an account, you can safely ignore this email.</p>
+  </div>
+`;
+
+/**
+ * Login security alert email body
+ */
+exports.loginNotificationHtml = () => `
+  <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+    <h2 style="color: #2b4593;">Security Alert</h2>
+    <p>Your account was just logged in to the Nile University Repository.</p>
+    <p>If this was not you, please reset your password immediately to secure your account.</p>
+  </div>
+`;
+
+/**
+ * Group formation/assignment email body
+ */
+exports.groupFormationEmailHtml = ({ supervisorName, groupNumber, year, role }) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    return `
+    <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+      <h2 style="color: #2b4593; text-align: center;">Group Assignment Notification</h2>
+      <p>Hello,</p>
+      <p>You have been assigned to a project group for the academic year <strong>${year}</strong> by <strong>${supervisorName}</strong>.</p>
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 10px 0;"><strong>Group Details:</strong></p>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li><strong>Group Number:</strong> ${groupNumber}</li>
+          <li><strong>Your Role:</strong> ${role}</li>
+          <li><strong>Academic Year:</strong> ${year}</li>
+        </ul>
+      </div>
+      <p>You can now collaborate with your group members and start working on your project submissions.</p>
+      <div style="margin: 30px 0; text-align: center;">
+        <a href="${frontendUrl}/dashboard"
+           style="background-color: #2b4593; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+          View Dashboard
+        </a>
+      </div>
+      <p style="color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
+        This is an automated notification from the Nile University Repository.
+      </p>
+    </div>
+  `;
+};
+
+/**
+ * Password reset email body
+ */
+exports.resetPasswordEmailHtml = (resetLink) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+    <h2 style="color: #2b4593; text-align: center;">Reset Your Password</h2>
+    <p>We received a request to reset your password for the Nile University Repository. Click the button below to choose a new password:</p>
+    <div style="margin: 30px 0; text-align: center;">
+      <a href="${resetLink}"
+         style="background-color: #2b4593; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+        Reset Password
+      </a>
+    </div>
+    <p style="color: #666; font-size: 12px;">This link will expire in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>
+  </div>
+`;
+
+/**
+ * Contact form email body (sent to admin)
+ */
+exports.contactEmailHtml = ({ fromName, fromEmail, message }) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+    <h2 style="color: #2b4593; text-align: center;">New Complaint/Suggestion</h2>
+    <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+      <p><strong>From:</strong> ${fromName} (${fromEmail})</p>
+      <p><strong>Message:</strong></p>
+      <p style="white-space: pre-wrap; color: #1a202c;">${message}</p>
+    </div>
+    <p style="color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
+      This message was sent via the Nile University Repository contact form.
+    </p>
+  </div>
+`;

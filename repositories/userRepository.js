@@ -131,10 +131,10 @@ module.exports = {
   updateUserDetails: async (userId, data) => {
     const { firstName, lastName, email, department, roleSpecificId, role } = data;
     const client = await db.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
-      
+
       // Update base user info
       await client.query(
         `UPDATE Users 
@@ -142,7 +142,7 @@ module.exports = {
          WHERE id = $4`,
         [firstName, lastName, email, userId]
       );
-      
+
       // Update role-specific info
       if (role === 'student') {
         await client.query(
@@ -159,7 +159,7 @@ module.exports = {
           [roleSpecificId, userId]
         );
       }
-      
+
       await client.query('COMMIT');
       return { success: true };
     } catch (error) {

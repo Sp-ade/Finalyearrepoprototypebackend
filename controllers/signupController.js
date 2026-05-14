@@ -1,4 +1,6 @@
 const authService = require('../services/authservice');
+const activityService = require('../services/activityService');
+
 
 exports.signup = async (req, res, next) => {
   try {
@@ -8,6 +10,10 @@ exports.signup = async (req, res, next) => {
       message: 'Account created successfully. Please verify your email.',
       user
     });
+
+    // Log the activity (async)
+    activityService.logUserSignup(user.id, user.email).catch(err => console.error('Signup error:', err));
+
   } catch (err) {
     if (err.code === '23505' || err.statusCode === 409) {
       return res.status(409).json({ message: 'User with this email or ID already exists' });

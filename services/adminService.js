@@ -5,6 +5,7 @@ const activityRepository = require('../repositories/activityRepository');
 const projectRepository = require('../repositories/projectRepository');
 const submissionRepository = require('../repositories/submissionRepository');
 const userRepository = require('../repositories/userRepository');
+const notificationService = require('./notificationService');
 
 class AdminService {
     /**
@@ -218,6 +219,26 @@ class AdminService {
             return { success: false, message: 'Failed to reassign supervisor' };
         }
 
+        // 4. Notify both old and new supervisor
+        const studentName = `${student.first_name} ${student.last_name}`;
+        const oldSupervisorId = student.leader_assigned_by;
+
+        if (oldSupervisorId && oldSupervisorId !== newSupervisorId) {
+            notificationService.createNotification(
+                oldSupervisorId,
+                'Group Supervision Removed',
+                `You have been removed as the supervisor for student leader ${studentName} (${student.student_matric_no}) by an administrator.`,
+                'supervisor_removed'
+            ).catch(err => console.error('Failed to send old supervisor removal notification:', err));
+        }
+
+        notificationService.createNotification(
+            newSupervisorId,
+            'Group Supervision Assigned',
+            `You have been assigned as the supervisor for student leader ${studentName} (${student.student_matric_no}) by an administrator.`,
+            'supervisor_assigned'
+        ).catch(err => console.error('Failed to send supervisor reassignment notification:', err));
+
         return {
             success: true,
             message: 'Supervisor successfully reassigned for student leader',
@@ -272,6 +293,31 @@ class AdminService {
         if (!updated) {
             return { success: false, message: 'Failed to reassign supervisor to project' };
         }
+
+        // Notify both old and new supervisor
+        const oldSupervisorId = project.supervisor_id;
+
+        if (oldSupervisorId && oldSupervisorId !== newSupervisorId) {
+            notificationService.createNotification(
+                oldSupervisorId,
+                'Project Supervision Removed',
+                `You have been removed as the supervisor for project "${project.title}" by an administrator.`,
+                'supervisor_removed',
+                null,
+                projectId,
+                'project'
+            ).catch(err => console.error('Failed to send old supervisor project removal notification:', err));
+        }
+
+        notificationService.createNotification(
+            newSupervisorId,
+            'Project Supervision Assigned',
+            `You have been assigned as the supervisor for project "${project.title}" by an administrator.`,
+            'supervisor_assigned',
+            null,
+            projectId,
+            'project'
+        ).catch(err => console.error('Failed to send project supervisor notification:', err));
 
         return {
             success: true,
@@ -359,8 +405,31 @@ class AdminService {
             throw new Error('Assigned supervisor not found or is not a supervisor.');
         }
 
-        // 2. Perform the update via adminRepository
+        // 2. Capture the old supervisor before the update
+        const currentLeader = await supervisorRepository.getStudentById(leaderId);
+        const oldSupervisorId = currentLeader ? currentLeader.leader_assigned_by : null;
+
+        // 3. Perform the update via adminRepository
         await adminRepository.adminUpdateGroup(groupNumber, year, leaderId, memberIds, newSupervisorId);
+
+        // 4. Notify both old and new supervisor
+        const parsedNewId = parseInt(newSupervisorId);
+
+        if (oldSupervisorId && oldSupervisorId !== parsedNewId) {
+            notificationService.createNotification(
+                oldSupervisorId,
+                'Group Supervision Removed',
+                `You have been removed as the supervisor for Group ${groupNumber} (${year}) by an administrator.`,
+                'supervisor_removed'
+            ).catch(err => console.error('Failed to send old group supervisor removal notification:', err));
+        }
+
+        notificationService.createNotification(
+            parsedNewId,
+            'Group Supervision Assigned',
+            `You have been assigned as the supervisor for Group ${groupNumber} (${year}) by an administrator.`,
+            'supervisor_assigned'
+        ).catch(err => console.error('Failed to send group supervisor notification:', err));
 
         return { 
             success: true, 
