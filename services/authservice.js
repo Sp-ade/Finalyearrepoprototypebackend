@@ -9,16 +9,28 @@ exports.login = async (email, password) => {
 
   if (!user) throw new Error('Invalid credentials')
 
-  console.log(`[AUTH DEBUG] User ${email} is_verified:`, user.is_verified, `(Type: ${typeof user.is_verified})`);
+  const ok = await bcrypt.compare(password, user.password_hash)
+  if (!ok) throw new Error('Invalid credentials')
 
   if (user.is_verified !== true) {
-    const error = new Error('Please verify your email before logging in')
+    // Check if verification token has expired
+    const now = new Date();
+    const expiry = user.verification_expires ? new Date(user.verification_expires) : null;
+
+    if (!expiry || now > expiry) {
+      console.log(`[AUTH] Verification token for ${email} expired or missing. Triggering auto-resend.`);
+      // Call resendVerification (defined below) to generate and send a new token
+      // We don't await this so the user gets the response immediately
+      exports.resendVerification(email).catch(err => {
+        console.error(`[AUTH] Failed to auto-resend verification to ${email}:`, err.message);
+      });
+    }
+
+    const error = new Error('Please check your registered mail for verification')
     error.statusCode = 403
     throw error
   }
 
-  const ok = await bcrypt.compare(password, user.password_hash)
-  if (!ok) throw new Error('Invalid credentials')
 
   const token = jwt.sign({
     sub: user.id,

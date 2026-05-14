@@ -7,7 +7,8 @@ exports.signup = async (req, res, next) => {
     const { email, password, firstName, lastName, role, studentId, department } = req.body;
     const user = await authService.signup({ email, password, firstName, lastName, role, studentId, department });
     res.status(201).json({
-      message: 'Account created successfully. Please verify your email.',
+      message: 'Account created successfully. Please check your registered mail for verification.',
+
       user
     });
 

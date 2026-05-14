@@ -21,7 +21,8 @@ const authenticate = async (req, res, next) => {
         if (!user || user.is_verified !== true) {
             return res.status(403).json({
                 success: false,
-                message: 'Account not verified. Please verify your email.'
+                message: 'Please check your registered mail for verification'
+
             });
         }
 
