@@ -60,26 +60,47 @@ npm start
 
 The server will start at `http://localhost:3000`
 
-## Environment Variables
+## 🔐 Environment Variables
 
-
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/nilefinalyeardb` |
+| Variable | Description | Example |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/db` |
 | `PORT` | Server port | `3000` |
-| `SEED_EMAIL` | Demo user email for database seeding | `test@nileuniversity.edu.ng` |
-| `SEED_PASSWORD` | Demo user password for database seeding | `password123` |
-| `SEED_FIRST_NAME` | Demo user first name | `Test` |
-| `SEED_LAST_NAME` | Demo user last name | `User` |
-| `SEED_ROLE` | Demo user role (student/supervisor/admin) | `student` |
+| `JWT_SECRET` | Secret key for JWT signing | `super-secret-key` |
+| `BACKEND_URL` | Base URL of the backend (for verification links) | `http://localhost:3000` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary name for file uploads | `your_cloud_name` |
+| `EMAIL_USER` / `EMAIL_PASS` | SMTP credentials for notifications | `test@nileuniversity.edu.ng` |
 
-## API Endpoints
+## 📡 API Endpoints
 
-### Authentication
-- `POST /api/login` - User login
-  - Body: `{ "email": "string", "password": "string" }`
-  - Returns: `{ "user": { "id": number, "email": string, "firstName": string, "lastName": string, "role": string }, "token": "string" }`
+### 🔑 Authentication (`/api/auth`)
+- `POST /login` - User login (Returns JWT)
+- `POST /signup` - User registration
+- `POST /logout` - Invalidate session
+- `GET /me` - Get current user profile
+- `POST /forgot-password` - Trigger password reset email
+- `POST /reset-password` - Complete password reset
 
-### Projects (Dummy Data)
-- `GET /api/dummy-projects` - Get dummy project data
+### 📁 Projects (`/api/projects`)
+- `GET /` - List all projects (Search & Filter)
+- `GET /:id` - Get project details
+- `POST /` - Create a new project (Student Leaders)
+- `PUT /:id` - Update project details
+- `DELETE /:id` - Remove a project
+- `PATCH /:id/reassign-supervisor` - (Admin/Lead) Change supervisor
+
+### 🛠️ Admin (`/api/admin`)
+*All routes require Admin role.*
+- `GET /users` - List and manage all users
+- `GET /analytics/dashboard` - Get system-wide statistics
+- `GET /logs` - View activity logs (Audit trail)
+- `POST /database/backup` - Create a manual DB backup
+- `POST /storage/cleanup` - Purge orphaned files from Cloudinary
+
+### ✉️ Other
+- `/api/contact` - Submit feedback or complaints
+- `/api/notifications` - Manage user alerts
+- `/api/submissions` - Project artifact uploads & grading
 
 ## Database Schema
 
@@ -104,19 +125,19 @@ CREATE TABLE Users (
 - Role must be one of: `student`, `supervisor`, or `admin`
 - Email must be unique
 
-## Project Structure
+## 📂 Project Structure
 
-```
+```text
 Backend/
-├── controllers/       # Request handlers
-├── middleware/        # Express middleware
-├── repositories/      # Database queries
-├── routes/           # API routes
-├── services/         # Business logic
-├── utils/            # Utility functions
-├── Database.js       # PostgreSQL connection pool
-├── index.js          # Application entry point
-└── init-db.js        # Database initialization script
+├── controllers/       # Business logic handlers
+├── middleware/        # Auth, Validation, & Security (Helmet, Rate Limit)
+├── repositories/      # SQL queries and Database interactions
+├── routes/            # API Route definitions
+├── services/          # External service integrations (Email, Cloudinary)
+├── utils/             # Helpers (Templates, Backups, File Parsers)
+├── Database.js       # PostgreSQL connection pool configuration
+├── index.js          # Express app initialization
+└── scripts/           # DB Migrations and maintenance scripts
 ```
 
 ## Troubleshooting
@@ -152,4 +173,3 @@ PORT=3001
 
 ## License
 
-ISC
