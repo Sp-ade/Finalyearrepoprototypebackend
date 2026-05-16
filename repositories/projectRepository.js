@@ -275,7 +275,14 @@ class ProjectRepository {
 
             // Only sync members if studentIds was actually passed in the update
             if (studentIds !== undefined) {
-                // Delete only project-specific member rows (preserve pre-project group rows)
+                // PRESERVE: Fetch existing group info before deleting rows
+                const groupInfoRes = await client.query(
+                    'SELECT group_number, year, assigned_by FROM Project_Members WHERE project_id = $1 LIMIT 1',
+                    [projectId]
+                );
+                const groupInfo = groupInfoRes.rows[0] || {};
+
+                // Delete only project-specific member rows
                 await client.query(
                     'DELETE FROM Project_Members WHERE project_id = $1',
                     [projectId]
@@ -299,7 +306,7 @@ class ProjectRepository {
                             }
                         }
 
-                        // Re-link: try to update existing group row first, then insert
+                        // Re-link: try to update existing pre-project group row first
                         const updateRes = await client.query(`
                             UPDATE Project_Members
                             SET project_id = $1, role = $2
@@ -308,11 +315,20 @@ class ProjectRepository {
                         `, [projectId, role, resolvedId]);
 
                         if (updateRes.rowCount === 0) {
+                            // Fix: Include preserved group info in the new record
                             await client.query(`
-                                INSERT INTO Project_Members (project_id, student_id, role)
-                                VALUES ($1, $2, $3)
-                                ON CONFLICT DO NOTHING
-                            `, [projectId, resolvedId, role]);
+                                INSERT INTO Project_Members (project_id, student_id, role, group_number, year, assigned_by)
+                                VALUES ($1, $2, $3, $4, $5, $6)
+                                ON CONFLICT (student_id, year) DO UPDATE 
+                                SET project_id = $1, role = $3, group_number = EXCLUDED.group_number
+                            `, [
+                                projectId, 
+                                resolvedId, 
+                                role, 
+                                groupInfo.group_number || null, 
+                                groupInfo.year || null, 
+                                groupInfo.assigned_by || null
+                            ]);
                         }
                     }
                 }

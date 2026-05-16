@@ -77,6 +77,7 @@ app.use('/api/supervisors', supervisorRoutes)
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/api/notifications', notificationRoutes)
 
+//staff permissions
 const staffPermissionRoutes = require('./routes/staffPermissionRoutes');
 app.use('/api/staff-permissions', staffPermissionRoutes)
 app.use('/api/contact', contactRoutes)
@@ -92,7 +93,7 @@ const startServer = async () => {
         // to avoid wiping data on every single restart
         if (process.env.RESET_DB === 'true') {
             await dropTables();
-            console.log('✅ Database dropped and Cloudinary cleared');
+            console.log('✅ Database dropped');
         }
 
         const initializeDatabase = require('./scripts/initialize-database');
