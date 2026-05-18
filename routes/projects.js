@@ -1,6 +1,6 @@
 const express = require('express');
 const projectController = require('../controllers/projectController');
-const { authenticate, optionalAuthenticate } = require('../middleware/auth');
+const { authenticate, optionalAuthenticate, isSupervisor } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -13,8 +13,8 @@ router.get('/tags', optionalAuthenticate, projectController.getAllTags);
 // GET single project by ID (Public/Optional Auth)
 router.get('/:id', optionalAuthenticate, projectController.getProjectById);
 
-// POST create new project (Mandatory Auth)
-router.post('/', authenticate, projectController.createProject);
+// POST create new project (Supervisors only)
+router.post('/', authenticate, isSupervisor, projectController.createProject);
 
 // PUT update project (Mandatory Auth)
 router.put('/:id', authenticate, projectController.updateProject);
