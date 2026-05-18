@@ -660,52 +660,29 @@ module.exports = {
     updateGroup
 };
 
+/**
+ * Upload a backup file manually
+ */
 async function uploadBackup(req, res) {
-    let filePathToDelete = null;
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
-        const { password } = req.body;
-        if (!password) {
-            // Delete uploaded file if password not provided to prevent junk files
-            try { backupService.deleteBackup(req.file.filename); } catch (e) {}
-            return res.status(400).json({ success: false, message: 'Admin password is required to perform database restoration' });
-        }
-
-        filePathToDelete = req.file.filename;
-
-        // 1. Verify Admin Password
-        try {
-            await authService.verifyPassword(req.user.email, password);
-        } catch (err) {
-            return res.status(401).json({ success: false, message: 'Invalid admin password. Verification failed.' });
-        }
-
-        // 2. Execute Restore
-        console.log(`[DATABASE] Starting database restore from uploaded file: ${req.file.filename}`);
-        await backupService.restoreBackup(req.file.filename);
-
-        // 3. Log the activity
-        await activityService.log(null, req.user.sub, 'DATABASE_RESTORE', `Restored database from manual upload: ${req.file.filename}`);
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${req.file.filename}`);
 
         res.status(200).json({
             success: true,
-            message: 'Database restored successfully from uploaded file'
+            message: 'Backup uploaded successfully',
+            backup: {
+                filename: req.file.filename,
+                size: req.file.size,
+                createdAt: new Date()
+            }
         });
     } catch (error) {
-        console.error('Error uploading/restoring backup:', error);
-        res.status(500).json({ success: false, message: 'Error restoring database from uploaded file', error: error.message });
-    } finally {
-        // 4. Clean up: Delete the file from /tmp / local backups folder
-        if (filePathToDelete) {
-            try {
-                backupService.deleteBackup(filePathToDelete);
-                console.log(`[DATABASE] Safely cleaned up uploaded backup file: ${filePathToDelete}`);
-            } catch (err) {
-                console.error(`[DATABASE] Cleanup of uploaded file failed: ${err.message}`);
-            }
-        }
+        console.error('Error uploading backup:', error);
+        res.status(500).json({ success: false, message: 'Error uploading backup', error: error.message });
     }
 }

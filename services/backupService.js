@@ -2,15 +2,23 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
-const { getBackupDirectory } = require('../utils/backupPath');
 
-const BACKUP_DIR = getBackupDirectory();
+const BACKUP_DIR = path.join(__dirname, '../backups');
 
 /**
  * Ensures the backup directory exists. 
+ * Called lazily when an operation is performed.
  */
 const ensureBackupDir = () => {
-    return !!BACKUP_DIR;
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) {
+            fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        }
+        return true;
+    } catch (err) {
+        console.error('Failed to access backup directory:', err.message);
+        return false;
+    }
 };
 
 /**
@@ -140,37 +148,12 @@ const restoreBackup = (filename) => {
 
         const child = spawn(psql, args, { shell: false });
         let stderr = '';
-        let handled = false;
 
         child.stderr.on('data', (data) => {
             stderr += data.toString();
         });
 
-        child.on('error', async (err) => {
-            if (handled) return;
-            handled = true;
-
-            if (err.code === 'ENOENT') {
-                console.warn('[DATABASE] psql client not found in system path. Falling back to native JS database restore...');
-                try {
-                    const { pool } = require('../Database');
-                    const sql = fs.readFileSync(filepath, 'utf8');
-                    await pool.query(sql);
-                    await resetSequences();
-                    resolve({ success: true, message: 'Restore completed via native fallback and sequences synchronized' });
-                } catch (fallbackErr) {
-                    console.error('[DATABASE] Native SQL fallback restore failed:', fallbackErr.message);
-                    reject(new Error(`psql not found and native restore failed: ${fallbackErr.message}`));
-                }
-            } else {
-                reject(err);
-            }
-        });
-
         child.on('close', async (code) => {
-            if (handled) return;
-            handled = true;
-
             if (code !== 0) {
                 console.error(`Restore error: Process exited with code ${code}`);
                 console.error(`Stderr: ${stderr}`);
