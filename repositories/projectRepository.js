@@ -170,6 +170,8 @@ class ProjectRepository {
             SELECT 
                 p.*,
                 u.first_name || ' ' || u.last_name as supervisor_name,
+                u.email as supervisor_email,
+                MAX(pm.group_number) as group_number,
                 COALESCE(
                     json_agg(
                         DISTINCT jsonb_build_object(
@@ -213,7 +215,7 @@ class ProjectRepository {
             LEFT JOIN Users studentsu ON pm.student_id = studentsu.id
             LEFT JOIN Students s ON pm.student_id = s.user_id
             WHERE p.project_id = $1
-            GROUP BY p.project_id, u.first_name, u.last_name
+            GROUP BY p.project_id, u.first_name, u.last_name, u.email
         `;
 
         const result = await db.query(query, [projectId]);

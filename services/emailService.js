@@ -150,10 +150,29 @@ const sendContactEmail = async ({ fromName, fromEmail, message }) => {
   }
 };
 
+/**
+ * Send project submission notification to supervisor
+ */
+const sendSubmissionEmail = async (email, { supervisorName, groupName, leaderName, projectTitle }) => {
+  console.log(`📧 Sending submission notification email to: ${email}`);
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: `New Project Submission: ${projectTitle}`,
+      html: templates.submissionEmailHtml({ supervisorName, groupName, leaderName, projectTitle }),
+    });
+    console.log(`✅ Submission notification email sent to ${email}`);
+  } catch (err) {
+    console.error('❌ Failed to send submission notification email:', err.message);
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendLoginNotification,
   sendResetPasswordEmail,
   sendGroupFormationEmail,
   sendContactEmail,
+  sendSubmissionEmail,
 };

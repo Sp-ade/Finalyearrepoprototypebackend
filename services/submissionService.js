@@ -20,6 +20,12 @@ class SubmissionService {
             const project = await projectRepository.getProjectById(projectId);
             if (project && project.supervisor_id) {
                 const notificationService = require('./notificationService');
+                const emailService = require('./emailService');
+
+                const leader = project.members && project.members.find(m => m.role === 'Leader');
+                const leaderName = leader ? leader.name : 'Unknown';
+                const groupName = project.group_number ? `Group ${project.group_number}` : 'Unknown Group';
+
                 notificationService.createNotification(
                     project.supervisor_id, 
                     'New Project Submission', 
@@ -30,6 +36,14 @@ class SubmissionService {
                     'project'
                 ).catch(err => console.error('Error emitting submission notification:', err));
 
+                if (project.supervisor_email) {
+                    emailService.sendSubmissionEmail(project.supervisor_email, {
+                        supervisorName: project.supervisor_name,
+                        groupName: groupName,
+                        leaderName: leaderName,
+                        projectTitle: project.title
+                    }).catch(err => console.error('Error sending submission email:', err));
+                }
             }
         } catch (err) {
             console.error('Notification service integration error:', err);
@@ -194,6 +208,12 @@ class SubmissionService {
                 const project = await projectRepository.getProjectById(submission.project_id);
                 if (project && project.supervisor_id) {
                     const notificationService = require('./notificationService');
+                    const emailService = require('./emailService');
+
+                    const leader = project.members && project.members.find(m => m.role === 'Leader');
+                    const leaderName = leader ? leader.name : 'Unknown';
+                    const groupName = project.group_number ? `Group ${project.group_number}` : 'Unknown Group';
+
                     notificationService.createNotification(
                         project.supervisor_id, 
                         'Project Resubmitted', 
@@ -204,6 +224,14 @@ class SubmissionService {
                         'project'
                     ).catch(err => console.error('Error emitting resubmission notification:', err));
 
+                    if (project.supervisor_email) {
+                        emailService.sendSubmissionEmail(project.supervisor_email, {
+                            supervisorName: project.supervisor_name,
+                            groupName: groupName,
+                            leaderName: leaderName,
+                            projectTitle: `[Resubmission] ${project.title}`
+                        }).catch(err => console.error('Error sending submission email:', err));
+                    }
                 }
             } catch (err) {
                 console.error('Notification service integration error:', err);

@@ -19,6 +19,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
  * - groupFormationEmailHtml
  * - resetPasswordEmailHtml
  * - contactEmailHtml
+ * - submissionEmailHtml
  */
 
 exports.verificationSuccess = `
@@ -586,3 +587,35 @@ exports.contactEmailHtml = ({ fromName, fromEmail, message }) => `
     </p>
   </div>
 `;
+
+/**
+ * Project submission email body (sent to supervisor)
+ */
+exports.submissionEmailHtml = ({ supervisorName, groupName, leaderName, projectTitle }) => {
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    return `
+    <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+      <h2 style="color: #2b4593; text-align: center;">New Project Submission</h2>
+      <p>Hello <strong>${supervisorName}</strong>,</p>
+      <p>A student group has submitted their final year project for your review.</p>
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 10px 0;"><strong>Submission Details:</strong></p>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li><strong>Project Title:</strong> ${projectTitle}</li>
+          <li><strong>Group:</strong> ${groupName}</li>
+          <li><strong>Group Leader:</strong> ${leaderName}</li>
+        </ul>
+      </div>
+      <p>Please log in to the portal to review this submission.</p>
+      <div style="margin: 30px 0; text-align: center;">
+        <a href="${frontendUrl}/dashboard"
+           style="background-color: #2b4593; color: white; padding: 14px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+          Review Submission
+        </a>
+      </div>
+      <p style="color: #666; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px;">
+        This is an automated notification from the Nile University Repository.
+      </p>
+    </div>
+  `;
+};
