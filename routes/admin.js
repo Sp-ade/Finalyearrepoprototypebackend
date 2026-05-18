@@ -4,7 +4,7 @@ const adminController = require('../controllers/adminController');
 const storageController = require('../controllers/storageController');
 const { verifyAdmin } = require('../middleware/adminAuth');
 const { authenticate } = require('../middleware/auth');
-const { handleBackupUpload } = require('../utils/backupUpload');
+const { handleBackupUpload, handleBackupUploadMemory } = require('../utils/backupUpload');
 
 // Apply authentication and admin verification middleware to all routes
 router.use(authenticate);
@@ -53,6 +53,7 @@ router.post('/database/restore', adminController.restoreBackup);
 router.delete('/database/backup/:filename', adminController.deleteBackup);
 router.get('/database/backup/:filename/download', adminController.downloadBackup);
 router.post('/database/backup/upload', handleBackupUpload, adminController.uploadBackup);
+router.post('/database/backup/upload-restore', handleBackupUploadMemory, adminController.uploadAndRestore);
 
 // Storage Management Routes
 router.post('/storage/cleanup', storageController.cleanupCloudinary);

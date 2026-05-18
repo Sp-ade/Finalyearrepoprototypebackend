@@ -655,6 +655,7 @@ module.exports = {
     deleteBackup,
     downloadBackup,
     uploadBackup,
+    uploadAndRestore,
     getAllGroups,
     disbandGroup,
     updateGroup
@@ -686,3 +687,42 @@ async function uploadBackup(req, res) {
         res.status(500).json({ success: false, message: 'Error uploading backup', error: error.message });
     }
 }
+
+/**
+ * Upload a .sql file and immediately restore from it (memory-only, no disk writes).
+ * Designed for cloud platforms like Render where filesystem access is unreliable.
+ */
+async function uploadAndRestore(req, res) {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        // Verify admin password
+        const { password } = req.body;
+        if (!password) {
+            return res.status(400).json({ success: false, message: 'Admin password is required' });
+        }
+
+        try {
+            await authService.verifyPassword(req.user.email, password);
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Invalid admin password' });
+        }
+
+        // Read SQL from the memory buffer
+        const sqlContent = req.file.buffer.toString('utf-8');
+
+        // Restore directly via pg pool
+        const result = await backupService.restoreFromSQL(sqlContent);
+
+        // Log the activity
+        await activityService.log(null, req.user.sub, 'DATABASE_UPLOAD_RESTORE', `Uploaded and restored database from: ${req.file.originalname}`);
+
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in upload and restore:', error);
+        res.status(500).json({ success: false, message: 'Error restoring from uploaded file', error: error.message });
+    }
+}
+

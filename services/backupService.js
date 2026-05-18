@@ -212,10 +212,37 @@ const deleteBackup = (filename) => {
     throw new Error('File not found');
 };
 
+/**
+ * Restore a database directly from a SQL string (no filesystem or psql needed).
+ * This is the reliable approach for cloud platforms like Render.
+ */
+const restoreFromSQL = async (sqlContent) => {
+    const { pool } = require('../Database');
+
+    try {
+        // Execute the full SQL dump directly
+        await pool.query(sqlContent);
+
+        // Reset sequences after restore
+        try {
+            await resetSequences();
+        } catch (syncError) {
+            console.warn(`Restore successful but sequence sync failed: ${syncError.message}`);
+            return { success: true, message: 'Restore completed but sequence synchronization failed' };
+        }
+
+        return { success: true, message: 'Restore completed and sequences synchronized' };
+    } catch (err) {
+        console.error('Direct SQL restore failed:', err.message);
+        throw new Error(`Restore failed: ${err.message}`);
+    }
+};
+
 module.exports = {
     BACKUP_DIR,
     createBackup,
     listBackups,
     restoreBackup,
+    restoreFromSQL,
     deleteBackup
 };

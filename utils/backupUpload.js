@@ -45,4 +45,29 @@ const handleBackupUpload = (req, res, next) => {
     });
 };
 
-module.exports = { handleBackupUpload };
+/**
+ * Memory-based upload for "Upload & Restore" flow.
+ * Keeps the file in RAM as a Buffer — no disk writes needed.
+ */
+const memoryUpload = multer({
+    storage: multer.memoryStorage(),
+    fileFilter: (req, file, cb) => {
+        if (path.extname(file.originalname).toLowerCase() === '.sql') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only .sql files are allowed'));
+        }
+    },
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
+});
+
+const handleBackupUploadMemory = (req, res, next) => {
+    memoryUpload.single('backup')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
+        }
+        next();
+    });
+};
+
+module.exports = { handleBackupUpload, handleBackupUploadMemory };
