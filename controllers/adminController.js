@@ -617,7 +617,7 @@ const deleteBackup = async (req, res) => {
 const downloadBackup = async (req, res) => {
     try {
         const { filename } = req.params;
-        const filePath = path.join(__dirname, '../backups', filename);
+        const filePath = path.join(backupService.BACKUP_DIR, filename);
 
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ success: false, message: 'Backup file not found' });

@@ -1,9 +1,12 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 require('dotenv').config();
 
-const BACKUP_DIR = path.join(__dirname, '../backups');
+const BACKUP_DIR = process.env.NODE_ENV === 'production'
+    ? path.join(os.tmpdir(), 'backups')
+    : path.join(__dirname, '../backups');
 
 /**
  * Ensures the backup directory exists. 
@@ -210,6 +213,7 @@ const deleteBackup = (filename) => {
 };
 
 module.exports = {
+    BACKUP_DIR,
     createBackup,
     listBackups,
     restoreBackup,

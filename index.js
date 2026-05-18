@@ -11,7 +11,6 @@ const submissionRoutes = require('./routes/submissionRoutes')
 const supervisorRoutes = require('./routes/supervisorRoutes')
 const contactRoutes = require('./routes/contactRoutes')
 const errorHandler = require('./middleware/errorHandler')
-const db = require('./Database')
 const dropTables = require('./scripts/drop-tables')
 
 const PORT = process.env.PORT || 3000
@@ -82,7 +81,6 @@ const staffPermissionRoutes = require('./routes/staffPermissionRoutes');
 app.use('/api/staff-permissions', staffPermissionRoutes)
 app.use('/api/contact', contactRoutes)
 
-console.log('Routes registered:')
 
 // Error handler must be last
 app.use(errorHandler)
@@ -90,15 +88,15 @@ app.use(errorHandler)
 const startServer = async () => {
     try {
         // Optional: Only reset if RESET_DB=true is in .env 
-        // to avoid wiping data on every single restart
+        // to avoid wiping data on accident
         if (process.env.RESET_DB === 'true') {
             await dropTables();
             console.log('✅ Database dropped');
         }
-
+        //  initializing the database tables
         const initializeDatabase = require('./scripts/initialize-database');
         await initializeDatabase();
-        
+
         // Ensure admin account exists
         const createAdminAccount = require('./scripts/createAdmin');
         await createAdminAccount();
