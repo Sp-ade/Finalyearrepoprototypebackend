@@ -98,7 +98,10 @@ const startServer = async () => {
 
         const initializeDatabase = require('./scripts/initialize-database');
         await initializeDatabase();
-        //reconsider admin creation on startup
+        
+        // Ensure admin account exists
+        const createAdminAccount = require('./scripts/createAdmin');
+        await createAdminAccount();
 
         // One-time migration for leader assign link between students and supervisors
         if (process.env.ASSIGN_SCRIPT === 'true') {

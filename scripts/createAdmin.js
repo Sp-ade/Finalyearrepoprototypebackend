@@ -11,6 +11,14 @@ async function createAdminAccount() {
     const client = await pool.connect();
 
     try {
+        console.log('🔐 Checking for existing admin account...');
+        const checkResult = await client.query('SELECT * FROM Users WHERE email = $1', ['ade.admin@nileuniversity.edu.ng']);
+        
+        if (checkResult.rows.length > 0) {
+            console.log('✅ Admin account already exists. Skipping creation.');
+            return;
+        }
+
         console.log('🔐 Creating admin account...');
 
         // Hash the password
@@ -67,4 +75,8 @@ async function createAdminAccount() {
     }
 }
 
-createAdminAccount();
+if (require.main === module) {
+    createAdminAccount();
+} else {
+    module.exports = createAdminAccount;
+}
