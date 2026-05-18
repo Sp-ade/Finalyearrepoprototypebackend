@@ -12,6 +12,7 @@ const authenticate = async (req, res, next) => {
     }
 
     try {
+        // Verify JWT and decode payload to get user ID and role
         const decoded = jwt.verify(token);
         
         // Double-Lock: Check database status on every request to ensure verification hasn't been bypassed
@@ -68,8 +69,30 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
+const isSupervisor = (req, res, next) => {
+    if (req.user?.role !== 'supervisor') {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: Supervisor access required'
+        });
+    }
+    next();
+};
+
+const isStudent = (req, res, next) => {
+    if (req.user?.role !== 'student') {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: Student access required'
+        });
+    }
+    next();
+};
+
 module.exports = {
     authenticate,
     optionalAuthenticate,
-    isAdmin
+    isAdmin,
+    isSupervisor,
+    isStudent
 };

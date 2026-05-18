@@ -1,18 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const staffPermissionController = require('../controllers/staffPermissionController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, isSupervisor } = require('../middleware/auth');
 const { verifyAdmin } = require('../middleware/adminAuth');
 
 // ── Supervisor routes ─────────────────────────────────────────────────────────
 // Submit (or re-submit) an edit-permission request for a project
-router.post('/', authenticate, staffPermissionController.requestPermission);
+router.post('/', authenticate, isSupervisor, staffPermissionController.requestPermission);
 
 // List the logged-in supervisor's own requests
-router.get('/mine', authenticate, staffPermissionController.getMyPermissions);
+router.get('/mine', authenticate, isSupervisor, staffPermissionController.getMyPermissions);
 
 // Check permission status for a specific project
-router.get('/project/:projectId', authenticate, staffPermissionController.getPermissionForProject);
+router.get('/project/:projectId', authenticate, isSupervisor, staffPermissionController.getPermissionForProject);
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
 // List all staff permission requests (optionally: ?status=Pending)

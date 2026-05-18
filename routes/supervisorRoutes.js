@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const supervisorController = require('../controllers/supervisorController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, isSupervisor } = require('../middleware/auth');
 
-router.use(authenticate);
+router.use(authenticate, isSupervisor);
 
 // Get supervisor dashboard stats
 router.get('/students', supervisorController.getAllStudents);
