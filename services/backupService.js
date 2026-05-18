@@ -2,23 +2,15 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
+const { getBackupDirectory } = require('../utils/backupPath');
 
-const BACKUP_DIR = path.join(__dirname, '../backups');
+const BACKUP_DIR = getBackupDirectory();
 
 /**
  * Ensures the backup directory exists. 
- * Called lazily when an operation is performed.
  */
 const ensureBackupDir = () => {
-    try {
-        if (!fs.existsSync(BACKUP_DIR)) {
-            fs.mkdirSync(BACKUP_DIR, { recursive: true });
-        }
-        return true;
-    } catch (err) {
-        console.error('Failed to access backup directory:', err.message);
-        return false;
-    }
+    return !!BACKUP_DIR;
 };
 
 /**

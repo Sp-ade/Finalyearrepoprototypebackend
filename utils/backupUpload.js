@@ -1,18 +1,14 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { getBackupDirectory } = require('./backupPath');
 
 /**
  * Configure local storage for database backups.
- * Files are saved to the ../backups directory.
  */
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const backupDir = path.join(__dirname, '../backups');
-        if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-        }
-        cb(null, backupDir);
+        cb(null, getBackupDirectory());
     },
     filename: (req, file, cb) => {
         // Use original name but ensure it has .sql extension
