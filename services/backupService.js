@@ -140,12 +140,37 @@ const restoreBackup = (filename) => {
 
         const child = spawn(psql, args, { shell: false });
         let stderr = '';
+        let handled = false;
 
         child.stderr.on('data', (data) => {
             stderr += data.toString();
         });
 
+        child.on('error', async (err) => {
+            if (handled) return;
+            handled = true;
+
+            if (err.code === 'ENOENT') {
+                console.warn('[DATABASE] psql client not found in system path. Falling back to native JS database restore...');
+                try {
+                    const { pool } = require('../Database');
+                    const sql = fs.readFileSync(filepath, 'utf8');
+                    await pool.query(sql);
+                    await resetSequences();
+                    resolve({ success: true, message: 'Restore completed via native fallback and sequences synchronized' });
+                } catch (fallbackErr) {
+                    console.error('[DATABASE] Native SQL fallback restore failed:', fallbackErr.message);
+                    reject(new Error(`psql not found and native restore failed: ${fallbackErr.message}`));
+                }
+            } else {
+                reject(err);
+            }
+        });
+
         child.on('close', async (code) => {
+            if (handled) return;
+            handled = true;
+
             if (code !== 0) {
                 console.error(`Restore error: Process exited with code ${code}`);
                 console.error(`Stderr: ${stderr}`);
