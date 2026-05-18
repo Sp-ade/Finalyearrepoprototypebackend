@@ -1,12 +1,9 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 require('dotenv').config();
 
-// Always use the OS temp directory — guaranteed writeable on all platforms
-// (local dev, Linux containers, Render, Heroku, etc.)
-const BACKUP_DIR = path.join(os.tmpdir(), 'nile-backups');
+const BACKUP_DIR = path.join(__dirname, '../backups');
 
 /**
  * Ensures the backup directory exists. 
@@ -69,8 +66,7 @@ const createBackup = () => {
             '--clean',
             '--if-exists',
             '--no-owner',
-            '--no-privileges',
-            '--inserts'
+            '--no-privileges'
         ];
 
         const child = spawn(pgDump, args, { shell: false });
@@ -213,100 +209,9 @@ const deleteBackup = (filename) => {
     throw new Error('File not found');
 };
 
-/**
- * Helper to convert PostgreSQL COPY statements (unsupported by standard pg client queries)
- * into standard SQL INSERT statements.
- */
-const convertCopyToInserts = (sqlContent) => {
-    const lines = sqlContent.split(/\r?\n/);
-    const outputLines = [];
-    let inCopy = false;
-    let tableName = '';
-    let columns = '';
-    let insertLines = [];
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        if (!inCopy) {
-            // Skip psql meta-commands (lines starting with \ except when we are in a COPY block)
-            if (line.trim().startsWith('\\')) {
-                continue;
-            }
-            // Check for COPY statement: COPY schema.table (col1, col2, ...) FROM stdin;
-            const copyMatch = line.match(/^COPY\s+([\w.]+)\s*\(([^)]+)\)\s*FROM\s+stdin;/i);
-            if (copyMatch) {
-                inCopy = true;
-                tableName = copyMatch[1];
-                columns = copyMatch[2];
-                insertLines = [];
-            } else {
-                outputLines.push(line);
-            }
-        } else {
-            // Check for end of COPY block (\.)
-            if (line.trim() === '\\.') {
-                inCopy = false;
-                if (insertLines.length > 0) {
-                    insertLines.forEach(vals => {
-                        outputLines.push(`INSERT INTO ${tableName} (${columns}) VALUES (${vals});`);
-                    });
-                }
-            } else {
-                // Parse tab-separated row values
-                const values = line.split('\t');
-                const parsedValues = values.map(val => {
-                    if (val === '\\N' || val === 'NULL') {
-                        return 'NULL';
-                    }
-                    // Escape single quotes for SQL string literals
-                    const escaped = val.replace(/'/g, "''");
-                    return `'${escaped}'`;
-                });
-                insertLines.push(parsedValues.join(', '));
-            }
-        }
-    }
-    
-    return outputLines.join('\n');
-};
-
-/**
- * Restore a database directly from a SQL string (no filesystem or psql needed).
- * This is the reliable approach for cloud platforms like Render.
- */
-const restoreFromSQL = async (sqlContent) => {
-    const { pool } = require('../Database');
-
-    try {
-        console.log('Pre-processing SQL content for direct restore...');
-        const processedSql = convertCopyToInserts(sqlContent);
-        
-        console.log('Executing direct SQL restore...');
-        // Execute the pre-processed SQL statements directly
-        await pool.query(processedSql);
-        console.log('✓ Direct SQL queries executed successfully.');
-
-        // Reset sequences after restore
-        try {
-            await resetSequences();
-        } catch (syncError) {
-            console.warn(`Restore successful but sequence sync failed: ${syncError.message}`);
-            return { success: true, message: 'Restore completed but sequence synchronization failed' };
-        }
-
-        return { success: true, message: 'Restore completed and sequences synchronized' };
-    } catch (err) {
-        console.error('Direct SQL restore failed:', err.message);
-        throw new Error(`Restore failed: ${err.message}`);
-    }
-};
-
 module.exports = {
-    BACKUP_DIR,
     createBackup,
     listBackups,
     restoreBackup,
-    restoreFromSQL,
     deleteBackup
 };

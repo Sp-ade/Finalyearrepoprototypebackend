@@ -1,18 +1,18 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { BACKUP_DIR } = require('../services/backupService');
 
 /**
  * Configure local storage for database backups.
- * Files are saved to the dynamic backups directory (os.tmpdir).
+ * Files are saved to the ../backups directory.
  */
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        if (!fs.existsSync(BACKUP_DIR)) {
-            fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        const backupDir = path.join(__dirname, '../backups');
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
         }
-        cb(null, BACKUP_DIR);
+        cb(null, backupDir);
     },
     filename: (req, file, cb) => {
         // Use original name but ensure it has .sql extension
@@ -21,7 +21,11 @@ const storage = multer.diskStorage({
     }
 });
 
-const backupUpload = multer({
+/**
+ * Multer middleware for database backup uploads.
+ * Restricts uploads to .sql files only.
+ */
+const backupUpload = multer({ 
     storage,
     fileFilter: (req, file, cb) => {
         if (path.extname(file.originalname).toLowerCase() === '.sql') {
@@ -32,42 +36,4 @@ const backupUpload = multer({
     }
 });
 
-/**
- * Middleware that runs multer upload and surfaces any Multer errors
- * as a clean JSON 400 response instead of a silent crash.
- */
-const handleBackupUpload = (req, res, next) => {
-    backupUpload.single('backup')(req, res, (err) => {
-        if (err) {
-            return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
-        }
-        next();
-    });
-};
-
-/**
- * Memory-based upload for "Upload & Restore" flow.
- * Keeps the file in RAM as a Buffer — no disk writes needed.
- */
-const memoryUpload = multer({
-    storage: multer.memoryStorage(),
-    fileFilter: (req, file, cb) => {
-        if (path.extname(file.originalname).toLowerCase() === '.sql') {
-            cb(null, true);
-        } else {
-            cb(new Error('Only .sql files are allowed'));
-        }
-    },
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
-});
-
-const handleBackupUploadMemory = (req, res, next) => {
-    memoryUpload.single('backup')(req, res, (err) => {
-        if (err) {
-            return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
-        }
-        next();
-    });
-};
-
-module.exports = { handleBackupUpload, handleBackupUploadMemory };
+module.exports = backupUpload;
