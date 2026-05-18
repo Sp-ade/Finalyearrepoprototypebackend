@@ -5,7 +5,7 @@ const { BACKUP_DIR } = require('../services/backupService');
 
 /**
  * Configure local storage for database backups.
- * Files are saved to the dynamic backups directory.
+ * Files are saved to the dynamic backups directory (os.tmpdir).
  */
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -21,11 +21,7 @@ const storage = multer.diskStorage({
     }
 });
 
-/**
- * Multer middleware for database backup uploads.
- * Restricts uploads to .sql files only.
- */
-const backupUpload = multer({ 
+const backupUpload = multer({
     storage,
     fileFilter: (req, file, cb) => {
         if (path.extname(file.originalname).toLowerCase() === '.sql') {
@@ -36,4 +32,17 @@ const backupUpload = multer({
     }
 });
 
-module.exports = backupUpload;
+/**
+ * Middleware that runs multer upload and surfaces any Multer errors
+ * as a clean JSON 400 response instead of a silent crash.
+ */
+const handleBackupUpload = (req, res, next) => {
+    backupUpload.single('backup')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, message: err.message || 'File upload failed' });
+        }
+        next();
+    });
+};
+
+module.exports = { handleBackupUpload };

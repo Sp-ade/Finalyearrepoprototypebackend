@@ -4,9 +4,9 @@ const fs = require('fs');
 const os = require('os');
 require('dotenv').config();
 
-const BACKUP_DIR = process.env.NODE_ENV === 'production'
-    ? path.join(os.tmpdir(), 'backups')
-    : path.join(__dirname, '../backups');
+// Always use the OS temp directory — guaranteed writeable on all platforms
+// (local dev, Linux containers, Render, Heroku, etc.)
+const BACKUP_DIR = path.join(os.tmpdir(), 'nile-backups');
 
 /**
  * Ensures the backup directory exists. 
