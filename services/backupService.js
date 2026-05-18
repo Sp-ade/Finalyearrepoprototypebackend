@@ -69,7 +69,8 @@ const createBackup = () => {
             '--clean',
             '--if-exists',
             '--no-owner',
-            '--no-privileges'
+            '--no-privileges',
+            '--inserts'
         ];
 
         const child = spawn(pgDump, args, { shell: false });
@@ -213,6 +214,64 @@ const deleteBackup = (filename) => {
 };
 
 /**
+ * Helper to convert PostgreSQL COPY statements (unsupported by standard pg client queries)
+ * into standard SQL INSERT statements.
+ */
+const convertCopyToInserts = (sqlContent) => {
+    const lines = sqlContent.split(/\r?\n/);
+    const outputLines = [];
+    let inCopy = false;
+    let tableName = '';
+    let columns = '';
+    let insertLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        if (!inCopy) {
+            // Skip psql meta-commands (lines starting with \ except when we are in a COPY block)
+            if (line.trim().startsWith('\\')) {
+                continue;
+            }
+            // Check for COPY statement: COPY schema.table (col1, col2, ...) FROM stdin;
+            const copyMatch = line.match(/^COPY\s+([\w.]+)\s*\(([^)]+)\)\s*FROM\s+stdin;/i);
+            if (copyMatch) {
+                inCopy = true;
+                tableName = copyMatch[1];
+                columns = copyMatch[2];
+                insertLines = [];
+            } else {
+                outputLines.push(line);
+            }
+        } else {
+            // Check for end of COPY block (\.)
+            if (line.trim() === '\\.') {
+                inCopy = false;
+                if (insertLines.length > 0) {
+                    insertLines.forEach(vals => {
+                        outputLines.push(`INSERT INTO ${tableName} (${columns}) VALUES (${vals});`);
+                    });
+                }
+            } else {
+                // Parse tab-separated row values
+                const values = line.split('\t');
+                const parsedValues = values.map(val => {
+                    if (val === '\\N' || val === 'NULL') {
+                        return 'NULL';
+                    }
+                    // Escape single quotes for SQL string literals
+                    const escaped = val.replace(/'/g, "''");
+                    return `'${escaped}'`;
+                });
+                insertLines.push(parsedValues.join(', '));
+            }
+        }
+    }
+    
+    return outputLines.join('\n');
+};
+
+/**
  * Restore a database directly from a SQL string (no filesystem or psql needed).
  * This is the reliable approach for cloud platforms like Render.
  */
@@ -220,8 +279,13 @@ const restoreFromSQL = async (sqlContent) => {
     const { pool } = require('../Database');
 
     try {
-        // Execute the full SQL dump directly
-        await pool.query(sqlContent);
+        console.log('Pre-processing SQL content for direct restore...');
+        const processedSql = convertCopyToInserts(sqlContent);
+        
+        console.log('Executing direct SQL restore...');
+        // Execute the pre-processed SQL statements directly
+        await pool.query(processedSql);
+        console.log('✓ Direct SQL queries executed successfully.');
 
         // Reset sequences after restore
         try {
