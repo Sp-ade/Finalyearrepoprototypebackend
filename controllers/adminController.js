@@ -661,43 +661,23 @@ module.exports = {
 };
 
 /**
- * Upload a backup file manually (handles base64 JSON payload to bypass WAF block)
+ * Upload a backup file manually
  */
 async function uploadBackup(req, res) {
     try {
-        const { filename, content } = req.body;
-
-        if (!filename || !content) {
-            return res.status(400).json({ success: false, message: 'Filename and base64 content are required' });
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
-
-        // Validate file extension
-        if (!filename.endsWith('.sql')) {
-            return res.status(400).json({ success: false, message: 'Only .sql files are allowed' });
-        }
-
-        // Decode base64 content to binary buffer
-        const fileBuffer = Buffer.from(content, 'base64');
-
-        // Ensure backups directory exists
-        const backupDir = path.join(__dirname, '../backups');
-        if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-        }
-
-        // Write the decoded buffer to file
-        const filePath = path.join(backupDir, filename);
-        fs.writeFileSync(filePath, fileBuffer);
 
         // Log the activity
-        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${filename}`);
+        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${req.file.filename}`);
 
         res.status(200).json({
             success: true,
             message: 'Backup uploaded successfully',
             backup: {
-                filename: filename,
-                size: fileBuffer.length,
+                filename: req.file.filename,
+                size: req.file.size,
                 createdAt: new Date()
             }
         });
