@@ -6,7 +6,7 @@ module.exports = function errorHandler(err, req, res, next) {
   // change file size limit in utils cloudinary
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
-      message: 'File too large. Maximum size allowed is 8MB.',
+      message: 'File too large. Maximum size allowed is 15MB.',
       error: 'LIMIT_FILE_SIZE'
     })
   }

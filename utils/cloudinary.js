@@ -10,7 +10,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const FILE_SIZE_LIMIT = 8 * 1024 * 1024; // 8MB
+const FILE_SIZE_LIMIT = 15 * 1024 * 1024; // 8MB
 
 // Create storage for different file types
 const createCloudinaryStorage = (folder, allowedFormats, transformations = [], resourceType = 'auto') => {
