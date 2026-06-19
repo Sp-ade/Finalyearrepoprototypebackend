@@ -25,8 +25,11 @@ const storage = multer.diskStorage({
  * Multer middleware for database backup uploads.
  * Restricts uploads to .sql files only.
  */
-const backupUpload = multer({ 
+const backupUpload = multer({
     storage,
+    limits: {
+        fileSize: 100 * 1024 * 1024 // 100 MB max
+    },
     fileFilter: (req, file, cb) => {
         if (path.extname(file.originalname).toLowerCase() === '.sql') {
             cb(null, true);
