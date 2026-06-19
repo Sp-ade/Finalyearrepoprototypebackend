@@ -665,10 +665,19 @@ module.exports = {
  */
 async function uploadBackup(req, res) {
     try {
+        console.log('--- UPLOAD BACKUP REQUEST ---');
+        console.log('req.body keys:', Object.keys(req.body));
+        console.log('Content-Type header:', req.headers['content-type']);
+        
         const { filename: originalName, content: base64Content } = req.body;
 
         if (!originalName || !base64Content) {
-            return res.status(400).json({ success: false, message: 'No file uploaded or content missing' });
+            console.error('Missing originalName or base64Content. req.body keys:', Object.keys(req.body));
+            return res.status(400).json({ 
+                success: false, 
+                message: `No file uploaded or content missing. Received keys: ${Object.keys(req.body).join(', ')}`,
+                bodyProvided: !!req.body
+            });
         }
 
         // Determine the filename (ensure .sql extension)
