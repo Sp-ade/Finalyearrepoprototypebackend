@@ -669,14 +669,26 @@ async function uploadBackup(req, res) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
+        // Determine the filename (ensure .sql extension)
+        const originalName = req.file.originalname;
+        const filename = originalName.endsWith('.sql') ? originalName : `${originalName}.sql`;
+
+        // Ensure backups directory exists and write the buffer to disk
+        const backupDir = path.join(__dirname, '../backups');
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+        const filePath = path.join(backupDir, filename);
+        fs.writeFileSync(filePath, req.file.buffer);
+
         // Log the activity
-        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${req.file.filename}`);
+        await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${filename}`);
 
         res.status(200).json({
             success: true,
             message: 'Backup uploaded successfully',
             backup: {
-                filename: req.file.filename,
+                filename,
                 size: req.file.size,
                 createdAt: new Date()
             }
