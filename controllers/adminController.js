@@ -665,13 +665,17 @@ module.exports = {
  */
 async function uploadBackup(req, res) {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        const { filename: originalName, content: base64Content } = req.body;
+
+        if (!originalName || !base64Content) {
+            return res.status(400).json({ success: false, message: 'No file uploaded or content missing' });
         }
 
         // Determine the filename (ensure .sql extension)
-        const originalName = req.file.originalname;
         const filename = originalName.endsWith('.sql') ? originalName : `${originalName}.sql`;
+
+        // Decode base64 to buffer
+        const fileBuffer = Buffer.from(base64Content, 'base64');
 
         // Ensure backups directory exists and write the buffer to disk
         const backupDir = path.join(__dirname, '../backups');
@@ -679,7 +683,7 @@ async function uploadBackup(req, res) {
             fs.mkdirSync(backupDir, { recursive: true });
         }
         const filePath = path.join(backupDir, filename);
-        fs.writeFileSync(filePath, req.file.buffer);
+        fs.writeFileSync(filePath, fileBuffer);
 
         // Log the activity
         await activityService.log(null, req.user.sub, 'DATABASE_BACKUP_UPLOADED', `Uploaded manual database backup: ${filename}`);
@@ -689,7 +693,7 @@ async function uploadBackup(req, res) {
             message: 'Backup uploaded successfully',
             backup: {
                 filename,
-                size: req.file.size,
+                size: fileBuffer.length,
                 createdAt: new Date()
             }
         });

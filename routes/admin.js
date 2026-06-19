@@ -52,7 +52,7 @@ router.post('/database/backup', adminController.createBackup);
 router.post('/database/restore', adminController.restoreBackup);
 router.delete('/database/backup/:filename', adminController.deleteBackup);
 router.get('/database/backup/:filename/download', adminController.downloadBackup);
-router.post('/database/backup/upload', backupUpload.single('backup'), adminController.uploadBackup);
+router.post('/database/backup/upload', adminController.uploadBackup);
 
 // Storage Management Routes
 router.post('/storage/cleanup', storageController.cleanupCloudinary);
