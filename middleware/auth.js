@@ -79,6 +79,16 @@ const isSupervisor = (req, res, next) => {
     next();
 };
 
+const isSupervisorOrAdmin = (req, res, next) => {
+    if (req.user?.role !== 'supervisor' && req.user?.role !== 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: 'Forbidden: Supervisor or Admin access required'
+        });
+    }
+    next();
+};
+
 const isStudent = (req, res, next) => {
     if (req.user?.role !== 'student') {
         return res.status(403).json({
@@ -94,5 +104,6 @@ module.exports = {
     optionalAuthenticate,
     isAdmin,
     isSupervisor,
+    isSupervisorOrAdmin,
     isStudent
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const requestController = require('../controllers/requestController');
-const { authenticate, isStudent, isSupervisor } = require('../middleware/auth')
+const { authenticate, isStudent, isSupervisor, isSupervisorOrAdmin } = require('../middleware/auth')
 
 router.use(authenticate);
 
@@ -21,8 +21,8 @@ router.get('/student', isStudent, asyncHandler(requestController.getStudentReque
 router.get('/supervisor/:supervisorId', isSupervisor, asyncHandler(requestController.getSupervisorRequests));
 router.get('/supervisor', isSupervisor, asyncHandler(requestController.getSupervisorRequests));
 
-// Update request status — approve/reject (supervisors only)
-router.put('/:id', isSupervisor, asyncHandler(requestController.updateRequest));
+// Update request status — approve/reject (supervisors and admins)
+router.put('/:id', isSupervisorOrAdmin, asyncHandler(requestController.updateRequest));
 
 // Delete a request (students only — withdrawing their own request)
 router.delete('/:id', isStudent, asyncHandler(requestController.deleteRequest));
